@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConversationMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.mapper</a> &gt; <span class="el_source">ConversationMapper.java</span></div><h1>ConversationMapper.java</h1><pre class="source lang-java linenums">package com.example.backend.mapper;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.example.backend.dto.ConversationDTO;
+import com.example.backend.dto.MessageDTO;
+import com.example.backend.model.Conversation;
+import com.example.backend.model.User;
+import com.example.backend.repository.DoctorRepository;
+import com.example.backend.repository.PatientRepository;
+
+@Component
+<span class="nc" id="L17">public class ConversationMapper {</span>
+
+    @Autowired
+    private MessageMapper messageMapper;
+
+    @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
+
+    public Conversation createDTOToEntity(ConversationDTO.Create dto, User patientUser, User doctorUser) {
+<span class="nc" id="L29">        Conversation entity = new Conversation();</span>
+<span class="nc" id="L30">        entity.setPatientUser(patientUser);</span>
+<span class="nc" id="L31">        entity.setDoctorUser(doctorUser);</span>
+<span class="nc" id="L32">        entity.setCreatedAt(java.time.LocalDateTime.now());</span>
+<span class="nc" id="L33">        return entity;</span>
+    }
+
+    public ConversationDTO.Response entityToResponseDTO(Conversation entity) {
+<span class="nc" id="L37">        ConversationDTO.Response dto = new ConversationDTO.Response();</span>
+<span class="nc" id="L38">        dto.setConversationId(entity.getConversationId());</span>
+
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (entity.getPatientUser() != null) {</span>
+<span class="nc" id="L41">            dto.setPatientUserId(entity.getPatientUser().getId());</span>
+<span class="nc" id="L42">            dto.setPatientName(buildFullName(entity.getPatientUser()));</span>
+<span class="nc" id="L43">            patientRepository.findByUserIdWithUserAndRole(entity.getPatientUser().getId())</span>
+<span class="nc" id="L44">                    .ifPresent(patient -&gt; dto.setPatientId(patient.getPatientId()));</span>
+        }
+
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        if (entity.getDoctorUser() != null) {</span>
+<span class="nc" id="L48">            dto.setDoctorUserId(entity.getDoctorUser().getId());</span>
+<span class="nc" id="L49">            dto.setDoctorName(buildFullName(entity.getDoctorUser()));</span>
+<span class="nc" id="L50">            doctorRepository.findByUserId(entity.getDoctorUser().getId())</span>
+<span class="nc" id="L51">                    .ifPresent(doctor -&gt; dto.setDoctorId(doctor.getDoctorId()));</span>
+        }
+
+<span class="nc" id="L54">        dto.setCreatedAt(entity.getCreatedAt());</span>
+
+<span class="nc bnc" id="L56" title="All 4 branches missed.">        if (entity.getMessages() != null &amp;&amp; !entity.getMessages().isEmpty()) {</span>
+<span class="nc" id="L57">            dto.setMessages(entity.getMessages().stream()</span>
+<span class="nc" id="L58">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L59">                .collect(Collectors.toList()));</span>
+<span class="nc" id="L60">            dto.setMessageCount((long) entity.getMessages().size());</span>
+
+<span class="nc" id="L62">            entity.getMessages().stream()</span>
+<span class="nc" id="L63">                .max((m1, m2) -&gt; m1.getSentAt().compareTo(m2.getSentAt()))</span>
+<span class="nc" id="L64">                .ifPresent(lastMessage -&gt; dto.setLastMessageTime(lastMessage.getSentAt()));</span>
+        } else {
+<span class="nc" id="L66">            dto.setMessageCount(0L);</span>
+        }
+
+<span class="nc" id="L69">        return dto;</span>
+    }
+
+    public ConversationDTO.Response entityToResponseDTOWithMessages(Conversation entity, List&lt;MessageDTO.Response&gt; messages) {
+<span class="nc" id="L73">        ConversationDTO.Response dto = entityToResponseDTO(entity);</span>
+<span class="nc" id="L74">        dto.setMessages(messages);</span>
+<span class="nc" id="L75">        dto.setMessageCount((long) messages.size());</span>
+
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (!messages.isEmpty()) {</span>
+<span class="nc" id="L78">            messages.stream()</span>
+<span class="nc" id="L79">                .max((m1, m2) -&gt; m1.getSentAt().compareTo(m2.getSentAt()))</span>
+<span class="nc" id="L80">                .ifPresent(lastMessage -&gt; dto.setLastMessageTime(lastMessage.getSentAt()));</span>
+        }
+
+<span class="nc" id="L83">        return dto;</span>
+    }
+
+    private String buildFullName(User user) {
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (user == null) {</span>
+<span class="nc" id="L88">            return null;</span>
+        }
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        String firstName = user.getFirstName() != null ? user.getFirstName() : &quot;&quot;;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        String lastName = user.getLastName() != null ? user.getLastName() : &quot;&quot;;</span>
+<span class="nc" id="L92">        String fullName = (firstName + &quot; &quot; + lastName).trim();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        return fullName.isEmpty() ? user.getEmail() : fullName;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

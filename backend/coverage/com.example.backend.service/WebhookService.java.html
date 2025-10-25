@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WebhookService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">WebhookService.java</span></div><h1>WebhookService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import vn.payos.model.webhooks.WebhookData;
+import com.example.backend.model.Payment;
+import com.example.backend.repository.PaymentRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L15">@Slf4j</span>
+public class WebhookService {
+    
+    private final PaymentRepository paymentRepository;
+    
+    @Transactional
+    public void processPayOSWebhook(WebhookData webhookData) {
+        try {
+<span class="nc" id="L23">            log.info(&quot;Processing PayOS webhook: {}&quot;, webhookData);</span>
+            
+<span class="nc" id="L25">            String orderCode = String.valueOf(webhookData.getOrderCode());</span>
+<span class="nc" id="L26">            String status = webhookData.getCode();</span>
+<span class="nc" id="L27">            String description = webhookData.getDesc();</span>
+            
+            // Tìm payment theo order code
+<span class="nc" id="L30">            Payment payment = paymentRepository.findByPayOSCode(orderCode)</span>
+<span class="nc" id="L31">                .orElseThrow(() -&gt; new RuntimeException(&quot;Không tìm thấy payment với order code: &quot; + orderCode));</span>
+            
+            // Cập nhật trạng thái payment
+            Payment.PaymentStatus paymentStatus;
+<span class="nc bnc" id="L35" title="All 2 branches missed.">            if (&quot;00&quot;.equals(status)) {</span>
+<span class="nc" id="L36">                paymentStatus = Payment.PaymentStatus.PAID;</span>
+<span class="nc" id="L37">                payment.setPaidAt(LocalDateTime.now());</span>
+<span class="nc" id="L38">                payment.setPaymentMethod(&quot;PayOS&quot;);</span>
+<span class="nc" id="L39">                log.info(&quot;Payment completed successfully for order code: {}&quot;, orderCode);</span>
+            } else {
+<span class="nc" id="L41">                paymentStatus = Payment.PaymentStatus.FAILED;</span>
+<span class="nc" id="L42">                payment.setFailureReason(description);</span>
+<span class="nc" id="L43">                log.warn(&quot;Payment failed for order code: {} with reason: {}&quot;, orderCode, description);</span>
+            }
+            
+<span class="nc" id="L46">            payment.setStatus(paymentStatus);</span>
+<span class="nc" id="L47">            paymentRepository.save(payment);</span>
+            
+            // Có thể thêm logic khác như gửi email thông báo, cập nhật appointment status, etc.
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            if (paymentStatus == Payment.PaymentStatus.PAID) {</span>
+                // Cập nhật appointment status nếu cần
+<span class="nc bnc" id="L52" title="All 2 branches missed.">                if (payment.getAppointment() != null) {</span>
+<span class="nc" id="L53">                    payment.getAppointment().setStatus(&quot;Confirmed&quot;);</span>
+<span class="nc" id="L54">                    log.info(&quot;Appointment status updated to Confirmed for appointment ID: {}&quot;, </span>
+<span class="nc" id="L55">                        payment.getAppointment().getAppointmentId());</span>
+                }
+            }
+            
+<span class="nc" id="L59">        } catch (Exception e) {</span>
+<span class="nc" id="L60">            log.error(&quot;Error processing PayOS webhook: &quot;, e);</span>
+<span class="nc" id="L61">            throw new RuntimeException(&quot;Lỗi khi xử lý webhook: &quot; + e.getMessage());</span>
+<span class="nc" id="L62">        }</span>
+<span class="nc" id="L63">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DoctorService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">DoctorService.java</span></div><h1>DoctorService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.exception.ConflictException;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.model.Doctor;
+import com.example.backend.model.Department;
+import com.example.backend.model.Role;
+import com.example.backend.model.User;
+import com.example.backend.repository.DoctorRepository;
+import com.example.backend.repository.DepartmentRepository;
+import com.example.backend.repository.RoleRepository;
+import com.example.backend.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+/**
+ * Service class cho Doctor entity
+ * Chứa business logic để xử lý các thao tác CRUD với Doctor
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class DoctorService {
+
+    private final DoctorRepository doctorRepository;
+    private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    /**
+     * Lấy tất cả doctor với thông tin User và Role
+     * @return danh sách tất cả doctor
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Doctor&gt; getAllDoctorsWithUserAndRole() {
+<span class="nc" id="L48">        return doctorRepository.findAll();</span>
+    }
+
+    /**
+     * Lấy doctor theo ID với thông tin User và Role
+     * @param doctorId ID của doctor
+     * @return doctor nếu tìm thấy
+     * @throws NotFoundException nếu không tìm thấy doctor
+     */
+    @Transactional(readOnly = true)
+    public Doctor getDoctorByIdWithUserAndRole(Long doctorId) {
+<span class="nc" id="L59">        return doctorRepository.findById(doctorId)</span>
+<span class="nc" id="L60">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với ID: &quot; + doctorId));</span>
+    }
+
+    /**
+     * Tìm doctor theo specialty với thông tin User và Role
+     * @param specialty chuyên khoa
+     * @return danh sách doctor theo specialty
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Doctor&gt; getDoctorsBySpecialtyWithUserAndRole(String specialty) {
+<span class="nc" id="L70">        return doctorRepository.findBySpecialtyWithUserAndRole(specialty);</span>
+    }
+
+    /**
+     * Tìm doctor theo department với thông tin User và Role
+     * @param departmentId ID của department
+     * @return danh sách doctor theo department
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Doctor&gt; getDoctorsByDepartmentWithUserAndRole(Long departmentId) {
+<span class="nc" id="L80">        return doctorRepository.findByDepartmentWithUserAndRole(departmentId);</span>
+    }
+
+    /**
+     * Tìm doctor theo tên với thông tin User và Role
+     * @param keyword từ khóa tìm kiếm
+     * @return danh sách doctor theo tên
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Doctor&gt; getDoctorsByNameWithUserAndRole(String keyword) {
+<span class="nc" id="L90">        return doctorRepository.findByNameContainingWithUserAndRole(keyword);</span>
+    }
+
+    /**
+     * Tạo doctor mới
+     * @param userId ID của user (phải có roleId = 2)
+     * @param bio tiểu sử
+     * @param specialty chuyên khoa
+     * @param departmentId ID của department
+     * @return doctor đã được tạo
+     * @throws NotFoundException nếu không tìm thấy user
+     * @throws ConflictException nếu user không phải là doctor hoặc đã có thông tin doctor
+     */
+    public Doctor createDoctor(Long userId, String bio, String specialty, Long departmentId) {
+        // Kiểm tra user tồn tại
+<span class="nc" id="L105">        User user = userRepository.findById(userId)</span>
+<span class="nc" id="L106">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy user với ID: &quot; + userId));</span>
+
+        // Kiểm tra user có phải là doctor không (roleId = 2)
+<span class="nc bnc" id="L109" title="All 4 branches missed.">        if (user.getRole() == null || !user.getRole().getName().equals(&quot;Doctor&quot;)) {</span>
+<span class="nc" id="L110">            throw new ConflictException(&quot;User không phải là bác sĩ (roleId phải = 2)&quot;);</span>
+        }
+
+        // Kiểm tra user đã có thông tin doctor chưa
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (doctorRepository.existsByUserId(userId)) {</span>
+<span class="nc" id="L115">            throw new ConflictException(&quot;User đã có thông tin bác sĩ&quot;);</span>
+        }
+
+        // Lấy Department
+<span class="nc" id="L119">        Department department = departmentRepository.findById(departmentId)</span>
+<span class="nc" id="L120">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy department với ID: &quot; + departmentId));</span>
+
+        // Refresh entities to avoid detached entity issues
+<span class="nc" id="L123">        User refreshedUser = entityManager.merge(user);</span>
+<span class="nc" id="L124">        Department refreshedDepartment = entityManager.merge(department);</span>
+<span class="nc" id="L125">        entityManager.flush();</span>
+
+        // Get next Doctor ID
+<span class="nc" id="L128">        Long nextDoctorId = getNextDoctorId(); </span>
+        
+        // Tạo doctor mới
+<span class="nc" id="L131">        Doctor doctor = new Doctor();</span>
+<span class="nc" id="L132">        doctor.setDoctorId(nextDoctorId); // Set doctorId manually</span>
+<span class="nc" id="L133">        doctor.setUser(refreshedUser); // Set user reference</span>
+<span class="nc" id="L134">        doctor.setDepartment(refreshedDepartment); // Set department reference</span>
+<span class="nc" id="L135">        doctor.setBio(bio);</span>
+<span class="nc" id="L136">        doctor.setSpecialty(specialty);</span>
+<span class="nc" id="L137">        doctor.setCreatedAt(java.time.LocalDate.now()); // Set default values</span>
+<span class="nc" id="L138">        doctor.setStatus(&quot;ACTIVE&quot;);</span>
+
+        // Save using EntityManager
+<span class="nc" id="L141">        entityManager.persist(doctor);</span>
+<span class="nc" id="L142">        entityManager.flush();</span>
+<span class="nc" id="L143">        return doctor;</span>
+    }
+
+    /**
+     * Cập nhật thông tin doctor
+     * @param doctorId ID của doctor
+     * @param bio tiểu sử mới
+     * @param specialty chuyên khoa mới
+     * @param departmentId ID department mới
+     * @param status trạng thái mới
+     * @return doctor đã được cập nhật
+     * @throws NotFoundException nếu không tìm thấy doctor
+     */
+    public Doctor updateDoctor(Long doctorId, String bio, String specialty, Long departmentId, String status) {
+<span class="nc" id="L157">        Doctor doctor = doctorRepository.findById(doctorId)</span>
+<span class="nc" id="L158">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với ID: &quot; + doctorId));</span>
+
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (bio != null) {</span>
+<span class="nc" id="L161">            doctor.setBio(bio);</span>
+        }
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        if (specialty != null) {</span>
+<span class="nc" id="L164">            doctor.setSpecialty(specialty);</span>
+        }
+        
+        // Update department if provided
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (departmentId != null) {</span>
+<span class="nc" id="L169">            Department department = departmentRepository.findById(departmentId)</span>
+<span class="nc" id="L170">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy department với ID: &quot; + departmentId));</span>
+<span class="nc" id="L171">            doctor.setDepartment(department);</span>
+        }
+        
+        // Update status if provided
+<span class="nc bnc" id="L175" title="All 2 branches missed.">        if (status != null) {</span>
+<span class="nc" id="L176">            doctor.setStatus(status);</span>
+        }
+
+<span class="nc" id="L179">        return doctorRepository.save(doctor);</span>
+    }
+
+    /**
+     * Cập nhật thông tin bác sĩ và user
+     * @param doctorId ID của doctor
+     * @param bio Tiểu sử
+     * @param specialty Chuyên khoa
+     * @param departmentId ID khoa
+     * @param status Trạng thái
+     * @param email Email
+     * @param firstName Tên
+     * @param lastName Họ
+     * @param phone Số điện thoại
+     * @return Doctor đã được cập nhật
+     */
+    public Doctor updateDoctorWithUser(Long doctorId, String bio, String specialty, Long departmentId, String status,
+                                     String email, String firstName, String lastName, String phone, String avatarUrl) {
+<span class="nc" id="L197">        Doctor doctor = doctorRepository.findById(doctorId)</span>
+<span class="nc" id="L198">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với ID: &quot; + doctorId));</span>
+
+        // Update doctor info
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        if (bio != null) {</span>
+<span class="nc" id="L202">            doctor.setBio(bio);</span>
+        }
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        if (specialty != null) {</span>
+<span class="nc" id="L205">            doctor.setSpecialty(specialty);</span>
+        }
+        
+        // Update department if provided
+<span class="nc bnc" id="L209" title="All 2 branches missed.">        if (departmentId != null) {</span>
+<span class="nc" id="L210">            Department department = departmentRepository.findById(departmentId)</span>
+<span class="nc" id="L211">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy department với ID: &quot; + departmentId));</span>
+<span class="nc" id="L212">            doctor.setDepartment(department);</span>
+        }
+        
+        // Update status if provided
+<span class="nc bnc" id="L216" title="All 2 branches missed.">        if (status != null) {</span>
+<span class="nc" id="L217">            doctor.setStatus(status);</span>
+        }
+
+        // Update user info
+<span class="nc" id="L221">        User user = doctor.getUser();</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">        if (user != null) {</span>
+<span class="nc bnc" id="L223" title="All 4 branches missed.">            if (email != null &amp;&amp; !email.trim().isEmpty()) {</span>
+<span class="nc" id="L224">                user.setEmail(email);</span>
+            }
+<span class="nc bnc" id="L226" title="All 4 branches missed.">            if (firstName != null &amp;&amp; !firstName.trim().isEmpty()) {</span>
+<span class="nc" id="L227">                user.setFirstName(firstName);</span>
+            }
+<span class="nc bnc" id="L229" title="All 4 branches missed.">            if (lastName != null &amp;&amp; !lastName.trim().isEmpty()) {</span>
+<span class="nc" id="L230">                user.setLastName(lastName);</span>
+            }
+<span class="nc bnc" id="L232" title="All 4 branches missed.">            if (phone != null &amp;&amp; !phone.trim().isEmpty()) {</span>
+<span class="nc" id="L233">                user.setPhone(phone);</span>
+            }
+<span class="nc bnc" id="L235" title="All 4 branches missed.">            if (avatarUrl != null &amp;&amp; !avatarUrl.trim().isEmpty()) {</span>
+<span class="nc" id="L236">                user.setAvatarUrl(avatarUrl);</span>
+            }
+<span class="nc" id="L238">            userRepository.save(user);</span>
+        }
+
+<span class="nc" id="L241">        return doctorRepository.save(doctor);</span>
+    }
+
+    /**
+     * Xóa doctor (soft delete)
+     * @param doctorId ID của doctor
+     * @throws NotFoundException nếu không tìm thấy doctor
+     */
+    public void deleteDoctor(Long doctorId) {
+<span class="nc" id="L250">        Doctor doctor = doctorRepository.findById(doctorId)</span>
+<span class="nc" id="L251">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với ID: &quot; + doctorId));</span>
+
+        // Soft delete by updating both User status and Doctor status
+<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (doctor.getUser() != null) {</span>
+<span class="nc" id="L255">            User user = doctor.getUser();</span>
+<span class="nc" id="L256">            user.setStatus(User.UserStatus.INACTIVE);</span>
+<span class="nc" id="L257">            userRepository.save(user);</span>
+        }
+        
+        // Also update Doctor status to maintain consistency
+<span class="nc" id="L261">        doctor.setStatus(&quot;INACTIVE&quot;);</span>
+<span class="nc" id="L262">        doctorRepository.save(doctor);</span>
+<span class="nc" id="L263">    }</span>
+
+
+    /**
+     * Lấy doctor theo userId
+     * @param userId ID của user
+     * @return doctor nếu tìm thấy
+     * @throws NotFoundException nếu không tìm thấy doctor
+     */
+    @Transactional(readOnly = true)
+    public Doctor getDoctorByUserId(Long userId) {
+<span class="nc" id="L274">        return doctorRepository.findByUserId(userId)</span>
+<span class="nc" id="L275">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với userId: &quot; + userId));</span>
+    }
+
+    /**
+     * Kiểm tra user đã có thông tin doctor chưa
+     * @param userId ID của user
+     * @return true nếu đã có thông tin doctor
+     */
+    @Transactional(readOnly = true)
+    public boolean isUserDoctor(Long userId) {
+<span class="nc" id="L285">        return doctorRepository.existsByUserId(userId);</span>
+    }
+
+    /**
+     * Lưu doctor entity (dành cho SmartUserController)
+     * @param doctor entity doctor cần lưu
+     * @return doctor đã được lưu
+     */
+    public Doctor saveDoctor(Doctor doctor) {
+<span class="nc" id="L294">        return doctorRepository.save(doctor);</span>
+    }
+    
+    private Long getNextDoctorId() {
+        // Simple approach: get max ID + 1
+        try {
+<span class="nc" id="L300">            Long maxId = doctorRepository.findMaxDoctorId().orElse(0L);</span>
+<span class="nc" id="L301">            return maxId + 1;</span>
+<span class="nc" id="L302">        } catch (Exception e) {</span>
+<span class="nc" id="L303">            return 1L; // Fallback to 1 if no doctors exist</span>
+        }
+    }
+
+    /**
+     * Đăng ký bác sĩ mới (tạo cả User và Doctor)
+     * @param request thông tin đăng ký bác sĩ
+     * @throws ConflictException nếu email đã tồn tại
+     * @throws NotFoundException nếu không tìm thấy role Doctor hoặc Department
+     */
+    @Transactional
+    public void registerDoctor(DoctorRegisterRequest request) {
+        // 🔍 DEBUG: Log request data
+<span class="nc" id="L316">        System.out.println(&quot;=== REGISTER DOCTOR DEBUG ===&quot;);</span>
+<span class="nc" id="L317">        System.out.println(&quot;Email: &quot; + request.getEmail());</span>
+<span class="nc" id="L318">        System.out.println(&quot;Avatar URL: &quot; + request.getAvatarUrl());</span>
+<span class="nc" id="L319">        System.out.println(&quot;Department ID: &quot; + request.getDepartmentId());</span>
+<span class="nc" id="L320">        System.out.println(&quot;=============================&quot;);</span>
+        
+        // 1️⃣ Kiểm tra email đã tồn tại chưa
+<span class="nc bnc" id="L323" title="All 2 branches missed.">        if (userRepository.existsByEmail(request.getEmail())) {</span>
+<span class="nc" id="L324">            throw new ConflictException(&quot;Email đã tồn tại: &quot; + request.getEmail());</span>
+        }
+
+        // 2️⃣ Lấy Role Doctor (roleId = 2)
+<span class="nc" id="L328">        Role doctorRole = roleRepository.findById(2L)</span>
+<span class="nc" id="L329">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy role Doctor (roleId = 2)&quot;));</span>
+<span class="nc" id="L330">        System.out.println(&quot;Doctor Role: &quot; + doctorRole.getName());</span>
+
+        // 3️⃣ Lấy Department
+<span class="nc" id="L333">        Department department = departmentRepository.findById(request.getDepartmentId())</span>
+<span class="nc" id="L334">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy department với ID: &quot; + request.getDepartmentId()));</span>
+<span class="nc" id="L335">        System.out.println(&quot;Department: &quot; + department.getDepartmentName());</span>
+
+        // 4️⃣ Tạo User
+<span class="nc" id="L338">        User user = new User();</span>
+<span class="nc" id="L339">        user.setEmail(request.getEmail());</span>
+<span class="nc" id="L340">        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));</span>
+<span class="nc" id="L341">        user.setFirstName(request.getFirstName());</span>
+<span class="nc" id="L342">        user.setLastName(request.getLastName());</span>
+<span class="nc" id="L343">        user.setPhone(request.getPhone());</span>
+<span class="nc" id="L344">        user.setGender(request.getGender());</span>
+<span class="nc" id="L345">        user.setDateOfBirth(request.getDob());</span>
+<span class="nc" id="L346">        user.setAddress(request.getAddress());</span>
+<span class="nc" id="L347">        user.setAvatarUrl(request.getAvatarUrl());</span>
+<span class="nc" id="L348">        user.setRole(doctorRole);</span>
+<span class="nc" id="L349">        user.setStatus(User.UserStatus.ACTIVE);</span>
+
+<span class="nc" id="L351">        System.out.println(&quot;User Avatar URL before save: &quot; + user.getAvatarUrl());</span>
+
+        // Save User first
+<span class="nc" id="L354">        User savedUser = userRepository.save(user);</span>
+<span class="nc" id="L355">        entityManager.flush(); // Force flush to ensure User is persisted</span>
+        
+<span class="nc" id="L357">        System.out.println(&quot;User Avatar URL after save: &quot; + savedUser.getAvatarUrl());</span>
+<span class="nc" id="L358">        System.out.println(&quot;Saved User ID: &quot; + savedUser.getId());</span>
+        
+        // Get the persisted User ID
+<span class="nc" id="L361">        Long userId = savedUser.getId();</span>
+
+        // 5️⃣ Tạo Doctor với User ID đã tồn tại
+<span class="nc" id="L364">        createDoctorWithExistingUser(userId, request, department);</span>
+        
+<span class="nc" id="L366">        System.out.println(&quot;=== REGISTER DOCTOR COMPLETED ===&quot;);</span>
+<span class="nc" id="L367">    }</span>
+
+    @Transactional
+    private void createDoctorWithExistingUser(Long userId, DoctorRegisterRequest request, Department department) {
+        // Get the User entity by ID (this ensures it's properly loaded)
+<span class="nc" id="L372">        User user = userRepository.findById(userId)</span>
+<span class="nc" id="L373">                .orElseThrow(() -&gt; new NotFoundException(&quot;User not found with ID: &quot; + userId));</span>
+        
+        // Refresh entities to avoid detached entity issues
+<span class="nc" id="L376">        User refreshedUser = entityManager.merge(user);</span>
+<span class="nc" id="L377">        Department refreshedDepartment = entityManager.merge(department);</span>
+<span class="nc" id="L378">        entityManager.flush();</span>
+
+        // Get next Doctor ID
+<span class="nc" id="L381">        Long nextDoctorId = getNextDoctorId();</span>
+        
+        // Tạo doctor mới
+<span class="nc" id="L384">        Doctor doctor = new Doctor();</span>
+<span class="nc" id="L385">        doctor.setDoctorId(nextDoctorId); // Set doctorId manually</span>
+<span class="nc" id="L386">        doctor.setUser(refreshedUser); // Set user reference</span>
+<span class="nc" id="L387">        doctor.setDepartment(refreshedDepartment); // Set department reference</span>
+<span class="nc" id="L388">        doctor.setBio(request.getBio());</span>
+<span class="nc" id="L389">        doctor.setSpecialty(request.getSpecialty());</span>
+<span class="nc" id="L390">        doctor.setCreatedAt(java.time.LocalDate.now()); // Set default values</span>
+<span class="nc" id="L391">        doctor.setStatus(&quot;ACTIVE&quot;);</span>
+
+        // Save using EntityManager
+<span class="nc" id="L394">        entityManager.persist(doctor);</span>
+<span class="nc" id="L395">        entityManager.flush();</span>
+<span class="nc" id="L396">    }</span>
+
+    /**
+     * Request DTO cho đăng ký bác sĩ
+     */
+<span class="nc" id="L401">    public static class DoctorRegisterRequest {</span>
+        private String email;
+        private String password;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private User.Gender gender;
+        private java.time.LocalDate dob;
+        private String address;
+        private String avatarUrl;
+        private Long departmentId;
+        private String specialty;
+        private String bio;
+
+        // Getters and Setters
+<span class="nc" id="L416">        public String getEmail() { return email; }</span>
+<span class="nc" id="L417">        public void setEmail(String email) { this.email = email; }</span>
+        
+<span class="nc" id="L419">        public String getPassword() { return password; }</span>
+<span class="nc" id="L420">        public void setPassword(String password) { this.password = password; }</span>
+        
+<span class="nc" id="L422">        public String getFirstName() { return firstName; }</span>
+<span class="nc" id="L423">        public void setFirstName(String firstName) { this.firstName = firstName; }</span>
+        
+<span class="nc" id="L425">        public String getLastName() { return lastName; }</span>
+<span class="nc" id="L426">        public void setLastName(String lastName) { this.lastName = lastName; }</span>
+        
+<span class="nc" id="L428">        public String getPhone() { return phone; }</span>
+<span class="nc" id="L429">        public void setPhone(String phone) { this.phone = phone; }</span>
+        
+<span class="nc" id="L431">        public User.Gender getGender() { return gender; }</span>
+<span class="nc" id="L432">        public void setGender(User.Gender gender) { this.gender = gender; }</span>
+        
+<span class="nc" id="L434">        public java.time.LocalDate getDob() { return dob; }</span>
+<span class="nc" id="L435">        public void setDob(java.time.LocalDate dob) { this.dob = dob; }</span>
+        
+<span class="nc" id="L437">        public String getAddress() { return address; }</span>
+<span class="nc" id="L438">        public void setAddress(String address) { this.address = address; }</span>
+        
+<span class="nc" id="L440">        public Long getDepartmentId() { return departmentId; }</span>
+<span class="nc" id="L441">        public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }</span>
+        
+<span class="nc" id="L443">        public String getSpecialty() { return specialty; }</span>
+<span class="nc" id="L444">        public void setSpecialty(String specialty) { this.specialty = specialty; }</span>
+        
+<span class="nc" id="L446">        public String getBio() { return bio; }</span>
+<span class="nc" id="L447">        public void setBio(String bio) { this.bio = bio; }</span>
+        
+<span class="nc" id="L449">        public String getAvatarUrl() { return avatarUrl; }</span>
+<span class="nc" id="L450">        public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

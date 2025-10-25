@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PatientMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.mapper</a> &gt; <span class="el_source">PatientMapper.java</span></div><h1>PatientMapper.java</h1><pre class="source lang-java linenums">package com.example.backend.mapper;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.example.backend.dto.PatientDTO;
+import com.example.backend.model.Patient;
+import com.example.backend.model.User;
+
+@Component
+<span class="nc" id="L11">public class PatientMapper {</span>
+
+    @Autowired
+    private UserMapper userMapper;
+
+    public Patient createDTOToEntity(PatientDTO.Create createDTO, User user) {
+<span class="nc" id="L17">        Patient patient = new Patient();</span>
+<span class="nc" id="L18">        patient.setPatientId(user.getId());</span>
+<span class="nc" id="L19">        patient.setUser(user);</span>
+<span class="nc" id="L20">        patient.setHealthInsuranceNumber(createDTO.getHealthInsuranceNumber());</span>
+<span class="nc" id="L21">        patient.setMedicalHistory(createDTO.getMedicalHistory());</span>
+<span class="nc" id="L22">        patient.setStatus(&quot;ACTIVE&quot;);</span>
+<span class="nc" id="L23">        return patient;</span>
+    }
+
+    public PatientDTO.Response entityToResponseDTO(Patient patient) {
+<span class="nc" id="L27">        PatientDTO.Response dto = new PatientDTO.Response();</span>
+<span class="nc" id="L28">        dto.setPatientId(patient.getPatientId());</span>
+<span class="nc" id="L29">        dto.setHealthInsuranceNumber(patient.getHealthInsuranceNumber());</span>
+<span class="nc" id="L30">        dto.setMedicalHistory(patient.getMedicalHistory());</span>
+<span class="nc" id="L31">        dto.setCreatedAt(patient.getCreatedAt());</span>
+<span class="nc" id="L32">        dto.setStatus(patient.getStatus());</span>
+
+<span class="nc bnc" id="L34" title="All 2 branches missed.">        if (patient.getUser() != null) {</span>
+<span class="nc" id="L35">            dto.setUser(userMapper.entityToResponseDTO(patient.getUser()));</span>
+        }
+
+<span class="nc" id="L38">        return dto;</span>
+    }
+
+    public void updateEntityFromDTO(Patient patient, PatientDTO.Update updateDTO) {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (updateDTO.getHealthInsuranceNumber() != null) {</span>
+<span class="nc" id="L43">            patient.setHealthInsuranceNumber(updateDTO.getHealthInsuranceNumber());</span>
+        }
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        if (updateDTO.getMedicalHistory() != null) {</span>
+<span class="nc" id="L46">            patient.setMedicalHistory(updateDTO.getMedicalHistory());</span>
+        }
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (updateDTO.getStatus() != null) {</span>
+<span class="nc" id="L49">            patient.setStatus(updateDTO.getStatus());</span>
+        }
+<span class="nc" id="L51">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

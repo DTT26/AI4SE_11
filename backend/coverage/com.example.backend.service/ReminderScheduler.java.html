@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReminderScheduler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">ReminderScheduler.java</span></div><h1>ReminderScheduler.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.model.Appointment;
+import com.example.backend.repository.AppointmentRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L20">@Slf4j</span>
+public class ReminderScheduler {
+    private final AppointmentRepository appointmentRepository;
+    private final EmailService emailService;
+    
+    // Set để track appointments đã gửi nhắc nhở (trong memory)
+    private final Set&lt;Long&gt; sentReminders = ConcurrentHashMap.newKeySet();
+
+    // every 5 minutes check for appointments in next 30 minutes
+    @Scheduled(fixedDelay = 300000)
+    @Transactional
+    public void sendUpcomingReminders() {
+<span class="nc" id="L32">        LocalDateTime now = LocalDateTime.now();</span>
+<span class="nc" id="L33">        LocalDateTime until = now.plusMinutes(30);</span>
+<span class="nc" id="L34">        List&lt;Appointment&gt; list = appointmentRepository.findAll().stream()</span>
+<span class="nc bnc" id="L35" title="All 4 branches missed.">                .filter(a -&gt; a.getStartTime() != null &amp;&amp; a.getStartTime().isAfter(now)</span>
+<span class="nc bnc" id="L36" title="All 4 branches missed.">                        &amp;&amp; a.getStartTime().isBefore(until) &amp;&amp; !sentReminders.contains(a.getAppointmentId()))</span>
+<span class="nc" id="L37">                .toList();</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        for (Appointment a : list) {</span>
+            try {
+<span class="nc bnc" id="L40" title="All 4 branches missed.">                String patientEmail = a.getPatient() != null &amp;&amp; a.getPatient().getUser() != null</span>
+<span class="nc" id="L41">                        ? a.getPatient().getUser().getEmail()</span>
+<span class="nc" id="L42">                        : null;</span>
+<span class="nc" id="L43">                String subject = &quot;Nhắc lịch khám sắp tới&quot;;</span>
+<span class="nc" id="L44">                String text = String.format(&quot;Xin chào %s %s,\n\nBạn có lịch khám với bác sĩ %s vào %s. Vui lòng có mặt đúng giờ.&quot;,</span>
+<span class="nc bnc" id="L45" title="All 4 branches missed.">                        a.getPatient() != null &amp;&amp; a.getPatient().getUser() != null ? a.getPatient().getUser().getFirstName() : &quot;&quot;,</span>
+<span class="nc bnc" id="L46" title="All 4 branches missed.">                        a.getPatient() != null &amp;&amp; a.getPatient().getUser() != null ? a.getPatient().getUser().getLastName() : &quot;&quot;,</span>
+<span class="nc bnc" id="L47" title="All 4 branches missed.">                        a.getDoctor() != null &amp;&amp; a.getDoctor().getUser() != null ? a.getDoctor().getUser().getFirstName() + &quot; &quot; + a.getDoctor().getUser().getLastName() : &quot;&quot;,</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                        a.getStartTime() != null ? a.getStartTime().toString() : &quot;&quot;);</span>
+<span class="nc" id="L49">                emailService.sendSimpleEmail(patientEmail, subject, text);</span>
+                // Track trong memory để tránh spam, không thay đổi status appointment
+<span class="nc" id="L51">                sentReminders.add(a.getAppointmentId());</span>
+<span class="nc" id="L52">                log.debug(&quot;Reminder sent for appointment {}&quot;, a.getAppointmentId());</span>
+<span class="nc" id="L53">            } catch (Exception ex) {</span>
+<span class="nc" id="L54">                log.error(&quot;Failed sending reminder for appointment {}: {}&quot;, a.getAppointmentId(), ex.getMessage());</span>
+<span class="nc" id="L55">            }</span>
+<span class="nc" id="L56">        }</span>
+<span class="nc" id="L57">    }</span>
+    
+    // Method để clear memory tracking nếu cần (restart server sẽ tự clear)
+    public void clearReminderTracking() {
+<span class="nc" id="L61">        sentReminders.clear();</span>
+<span class="nc" id="L62">        log.info(&quot;Reminder tracking cleared&quot;);</span>
+<span class="nc" id="L63">    }</span>
+    
+    // Method để xem appointments đã gửi nhắc nhở
+    public Set&lt;Long&gt; getSentReminders() {
+<span class="nc" id="L67">        return Set.copyOf(sentReminders);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

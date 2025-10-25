@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PayOSService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">PayOSService.java</span></div><h1>PayOSService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import com.example.backend.model.Payment;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import vn.payos.PayOS;
+import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
+import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
+import vn.payos.model.v2.paymentRequests.PaymentLinkItem;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L14">@Slf4j</span>
+public class PayOSService {
+    
+    private final PayOS payOS;
+    
+    public CreatePaymentLinkResponse createPaymentLink(Payment payment, String returnUrl, String cancelUrl) {
+        try {
+<span class="nc" id="L21">            log.info(&quot;🔍 Creating PayOS payment link for payment ID: {}&quot;, payment.getPaymentId());</span>
+<span class="nc" id="L22">            log.info(&quot;🔍 Payment details: appointmentId={}, amount={}&quot;, </span>
+<span class="nc" id="L23">                payment.getAppointment().getAppointmentId(), payment.getAmount());</span>
+            
+<span class="nc" id="L25">            String orderCode = String.valueOf(System.currentTimeMillis());</span>
+            // PayOS yêu cầu description tối đa 25 ký tự
+<span class="nc bnc" id="L27" title="All 2 branches missed.">            String description = payment.getDescription() != null ? </span>
+<span class="nc" id="L28">                payment.getDescription() : &quot;Thanh toán lịch hẹn&quot;;</span>
+            
+            // Cắt ngắn description nếu quá 25 ký tự
+<span class="nc bnc" id="L31" title="All 2 branches missed.">            if (description.length() &gt; 25) {</span>
+<span class="nc" id="L32">                description = description.substring(0, 22) + &quot;...&quot;;</span>
+            }
+            
+            // Tạo PaymentLinkItem theo PayOS SDK
+<span class="nc" id="L36">            String itemName = &quot;Phí khám bệnh #&quot; + payment.getAppointment().getAppointmentId();</span>
+            // Cắt ngắn item name nếu quá dài
+<span class="nc bnc" id="L38" title="All 2 branches missed.">            if (itemName.length() &gt; 50) {</span>
+<span class="nc" id="L39">                itemName = itemName.substring(0, 47) + &quot;...&quot;;</span>
+            }
+            
+            // Lấy fee từ appointment thay vì từ payment amount
+<span class="nc" id="L43">            long appointmentFee = 0;</span>
+<span class="nc bnc" id="L44" title="All 4 branches missed.">            if (payment.getAppointment() != null &amp;&amp; payment.getAppointment().getFee() != null) {</span>
+<span class="nc" id="L45">                appointmentFee = payment.getAppointment().getFee().longValue();</span>
+<span class="nc" id="L46">                log.info(&quot;Using appointment fee: {} VND&quot;, appointmentFee);</span>
+            } else {
+                // Fallback nếu không có appointment fee
+<span class="nc" id="L49">                appointmentFee = payment.getAmount().longValue();</span>
+<span class="nc" id="L50">                log.warn(&quot;No appointment fee, using payment amount: {} VND&quot;, appointmentFee);</span>
+            }
+            
+            // PayOS yêu cầu amount theo VND (đồng Việt Nam)
+            // Appointment fee đã là VND thực tế, không cần chuyển đổi
+<span class="nc" id="L55">            long payOSAmount = appointmentFee;</span>
+            
+            // Log để debug
+<span class="nc" id="L58">            log.info(&quot;PayOS amount calculation: appointment fee = {}, PayOS amount = {}&quot;, </span>
+<span class="nc" id="L59">                appointmentFee, payOSAmount);</span>
+<span class="nc" id="L60">            log.info(&quot;PayOS will display: {} VND&quot;, payOSAmount);</span>
+            
+<span class="nc" id="L62">            PaymentLinkItem item = PaymentLinkItem.builder()</span>
+<span class="nc" id="L63">                .name(itemName)</span>
+<span class="nc" id="L64">                .quantity(1)</span>
+<span class="nc" id="L65">                .price(payOSAmount)</span>
+<span class="nc" id="L66">                .build();</span>
+            
+            // Tạo CreatePaymentLinkRequest theo PayOS SDK
+<span class="nc" id="L69">            CreatePaymentLinkRequest paymentData = CreatePaymentLinkRequest.builder()</span>
+<span class="nc" id="L70">                .orderCode(Long.parseLong(orderCode))</span>
+<span class="nc" id="L71">                .amount(payOSAmount)</span>
+<span class="nc" id="L72">                .description(description)</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">                .returnUrl(returnUrl != null ? returnUrl : &quot;http://localhost:3000/payment/success&quot;)</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">                .cancelUrl(cancelUrl != null ? cancelUrl : &quot;http://localhost:3000/payment/cancel&quot;)</span>
+<span class="nc" id="L75">                .item(item)</span>
+<span class="nc" id="L76">                .build();</span>
+            
+            // Gọi PayOS API sử dụng SDK
+<span class="nc" id="L79">            log.info(&quot;🔍 Calling PayOS API with data: {}&quot;, paymentData);</span>
+<span class="nc" id="L80">            CreatePaymentLinkResponse response = payOS.paymentRequests().create(paymentData);</span>
+<span class="nc" id="L81">            log.info(&quot;✅ PayOS API response: {}&quot;, response);</span>
+            
+            // Cập nhật payment với thông tin từ PayOS
+<span class="nc" id="L84">            payment.setPayOSPaymentId(response.getPaymentLinkId());</span>
+<span class="nc" id="L85">            payment.setPayOSCode(orderCode);</span>
+<span class="nc" id="L86">            payment.setPayOSLink(response.getCheckoutUrl());</span>
+            
+<span class="nc" id="L88">            log.info(&quot;✅ PayOS payment link created successfully for payment ID: {}&quot;, payment.getPaymentId());</span>
+<span class="nc" id="L89">            return response;</span>
+            
+<span class="nc" id="L91">        } catch (Exception e) {</span>
+<span class="nc" id="L92">            log.error(&quot;Error creating PayOS payment link: &quot;, e);</span>
+<span class="nc" id="L93">            throw new RuntimeException(&quot;Lỗi khi tạo link thanh toán: &quot; + e.getMessage());</span>
+        }
+    }
+    
+    public Object getPaymentInfo(String payOSPaymentId) {
+        try {
+            // Sử dụng PayOS SDK để lấy thông tin payment
+<span class="nc" id="L100">            return payOS.paymentRequests().get(Long.parseLong(payOSPaymentId));</span>
+<span class="nc" id="L101">        } catch (Exception e) {</span>
+<span class="nc" id="L102">            log.error(&quot;Error getting PayOS payment info: &quot;, e);</span>
+<span class="nc" id="L103">            throw new RuntimeException(&quot;Lỗi khi lấy thông tin thanh toán: &quot; + e.getMessage());</span>
+        }
+    }
+    
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

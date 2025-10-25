@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConversationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">ConversationService.java</span></div><h1>ConversationService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.dto.ConversationDTO;
+import com.example.backend.dto.MessageDTO;
+import com.example.backend.exception.ConflictException;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.ConversationMapper;
+import com.example.backend.model.Conversation;
+import com.example.backend.model.Doctor;
+import com.example.backend.model.Patient;
+import com.example.backend.model.User;
+import com.example.backend.repository.ConversationRepository;
+import com.example.backend.repository.DoctorRepository;
+import com.example.backend.repository.MessageRepository;
+import com.example.backend.repository.PatientRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class ConversationService {
+
+    private final ConversationRepository conversationRepository;
+    private final PatientRepository patientRepository;
+    private final DoctorRepository doctorRepository;
+    private final MessageRepository messageRepository;
+    private final ConversationMapper conversationMapper;
+
+    public ConversationDTO.Response createConversation(ConversationDTO.Create dto) {
+<span class="nc" id="L37">        Patient patient = resolvePatient(dto.getPatientUserId(), dto.getPatientId());</span>
+<span class="nc" id="L38">        Doctor doctor = resolveDoctor(dto.getDoctorUserId(), dto.getDoctorId());</span>
+
+<span class="nc" id="L40">        User patientUser = patient.getUser();</span>
+<span class="nc" id="L41">        User doctorUser = doctor.getUser();</span>
+
+<span class="nc" id="L43">        validateParticipantRoles(patientUser, doctorUser);</span>
+
+<span class="nc" id="L45">        Optional&lt;Conversation&gt; existingConversation = conversationRepository</span>
+<span class="nc" id="L46">                .findByPatientUser_IdAndDoctorUser_Id(patientUser.getId(), doctorUser.getId());</span>
+
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (existingConversation.isPresent()) {</span>
+<span class="nc" id="L49">            return conversationMapper.entityToResponseDTO(existingConversation.get());</span>
+        }
+
+<span class="nc" id="L52">        Conversation conversation = conversationMapper.createDTOToEntity(dto, patientUser, doctorUser);</span>
+<span class="nc" id="L53">        Conversation savedConversation = conversationRepository.save(conversation);</span>
+
+<span class="nc" id="L55">        return conversationMapper.entityToResponseDTO(savedConversation);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public ConversationDTO.Response getConversationById(Long conversationId) {
+<span class="nc" id="L60">        Conversation conversation = conversationRepository.findById(conversationId)</span>
+<span class="nc" id="L61">                .orElseThrow(() -&gt; new NotFoundException(</span>
+                        &quot;Không tìm thấy cuộc trò chuyện với ID: &quot; + conversationId));
+
+<span class="nc" id="L64">        return conversationMapper.entityToResponseDTO(conversation);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public ConversationDTO.Response getConversationByIdWithMessages(Long conversationId) {
+<span class="nc" id="L69">        Conversation conversation = conversationRepository.findByIdWithMessages(conversationId)</span>
+<span class="nc" id="L70">                .orElseThrow(() -&gt; new NotFoundException(</span>
+                        &quot;Không tìm thấy cuộc trò chuyện với ID: &quot; + conversationId));
+
+<span class="nc" id="L73">        return conversationMapper.entityToResponseDTO(conversation);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;ConversationDTO.Response&gt; getConversationsByPatient(Long patientUserId, Long patientId) {
+<span class="nc" id="L78">        Long resolvedUserId = resolvePatientUserId(patientUserId, patientId);</span>
+<span class="nc" id="L79">        List&lt;Conversation&gt; conversations = conversationRepository</span>
+<span class="nc" id="L80">                .findByPatientUser_IdOrderByCreatedAtDesc(resolvedUserId);</span>
+<span class="nc" id="L81">        return conversations.stream()</span>
+<span class="nc" id="L82">                .map(conversationMapper::entityToResponseDTO)</span>
+<span class="nc" id="L83">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;ConversationDTO.Response&gt; getConversationsByDoctor(Long doctorUserId, Long doctorId) {
+<span class="nc" id="L88">        Long resolvedUserId = resolveDoctorUserId(doctorUserId, doctorId);</span>
+<span class="nc" id="L89">        List&lt;Conversation&gt; conversations = conversationRepository</span>
+<span class="nc" id="L90">                .findByDoctorUser_IdOrderByCreatedAtDesc(resolvedUserId);</span>
+<span class="nc" id="L91">        return conversations.stream()</span>
+<span class="nc" id="L92">                .map(conversationMapper::entityToResponseDTO)</span>
+<span class="nc" id="L93">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Optional&lt;ConversationDTO.Response&gt; getConversationByParticipants(
+            Long patientUserId, Long patientId, Long doctorUserId, Long doctorId) {
+<span class="nc" id="L99">        Long resolvedPatientUserId = resolvePatientUserId(patientUserId, patientId);</span>
+<span class="nc" id="L100">        Long resolvedDoctorUserId = resolveDoctorUserId(doctorUserId, doctorId);</span>
+
+<span class="nc" id="L102">        Optional&lt;Conversation&gt; conversation = conversationRepository</span>
+<span class="nc" id="L103">                .findByPatientUser_IdAndDoctorUser_Id(resolvedPatientUserId, resolvedDoctorUserId);</span>
+
+<span class="nc" id="L105">        return conversation.map(conversationMapper::entityToResponseDTO);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Long getConversationCountByPatient(Long patientUserId, Long patientId) {
+<span class="nc" id="L110">        Long resolvedUserId = resolvePatientUserId(patientUserId, patientId);</span>
+<span class="nc" id="L111">        return conversationRepository.countByPatientUser_Id(resolvedUserId);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Long getConversationCountByDoctor(Long doctorUserId, Long doctorId) {
+<span class="nc" id="L116">        Long resolvedUserId = resolveDoctorUserId(doctorUserId, doctorId);</span>
+<span class="nc" id="L117">        return conversationRepository.countByDoctorUser_Id(resolvedUserId);</span>
+    }
+
+    public void deleteConversation(Long conversationId) {
+<span class="nc" id="L121">        Conversation conversation = conversationRepository.findById(conversationId)</span>
+<span class="nc" id="L122">                .orElseThrow(() -&gt; new NotFoundException(</span>
+                        &quot;Không tìm thấy cuộc trò chuyện với ID: &quot; + conversationId));
+
+<span class="nc" id="L125">        List&lt;MessageDTO.Response&gt; messages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId)</span>
+<span class="nc" id="L126">                .stream()</span>
+<span class="nc" id="L127">                .map(msg -&gt; {</span>
+<span class="nc" id="L128">                    MessageDTO.Response response = new MessageDTO.Response();</span>
+<span class="nc" id="L129">                    response.setMessageId(msg.getMessageId());</span>
+<span class="nc" id="L130">                    return response;</span>
+                })
+<span class="nc" id="L132">                .toList();</span>
+
+<span class="nc" id="L134">        messageRepository.deleteAllById(messages.stream().map(MessageDTO.Response::getMessageId).toList());</span>
+<span class="nc" id="L135">        conversationRepository.delete(conversation);</span>
+<span class="nc" id="L136">    }</span>
+
+    @Transactional(readOnly = true)
+    public ConversationDTO.Response getConversationWithLatestMessages(Long conversationId, int limit) {
+<span class="nc" id="L140">        Conversation conversation = conversationRepository.findById(conversationId)</span>
+<span class="nc" id="L141">                .orElseThrow(() -&gt; new NotFoundException(</span>
+                        &quot;Không tìm thấy cuộc trò chuyện với ID: &quot; + conversationId));
+
+<span class="nc" id="L144">        List&lt;MessageDTO.Response&gt; latestMessages = messageRepository</span>
+<span class="nc" id="L145">                .findByConversationIdOrderBySentAtDesc(conversationId)</span>
+<span class="nc" id="L146">                .stream()</span>
+<span class="nc" id="L147">                .limit(limit)</span>
+<span class="nc" id="L148">                .map(msg -&gt; {</span>
+<span class="nc" id="L149">                    MessageDTO.Response response = new MessageDTO.Response();</span>
+<span class="nc" id="L150">                    response.setMessageId(msg.getMessageId());</span>
+<span class="nc" id="L151">                    response.setConversationId(msg.getConversation().getConversationId());</span>
+<span class="nc" id="L152">                    response.setSenderId(msg.getSender().getId());</span>
+<span class="nc" id="L153">                    response.setSenderName(msg.getSender().getFirstName() + &quot; &quot; + msg.getSender().getLastName());</span>
+<span class="nc" id="L154">                    response.setContent(msg.getContent());</span>
+<span class="nc" id="L155">                    response.setSentAt(msg.getSentAt());</span>
+<span class="nc" id="L156">                    return response;</span>
+                })
+<span class="nc" id="L158">                .toList();</span>
+
+<span class="nc" id="L160">        return conversationMapper.entityToResponseDTOWithMessages(conversation, latestMessages);</span>
+    }
+
+    private Patient resolvePatient(Long patientUserId, Long patientId) {
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        if (patientUserId != null) {</span>
+<span class="nc" id="L165">            return patientRepository.findByUserIdWithUserAndRole(patientUserId)</span>
+<span class="nc" id="L166">                    .orElseThrow(() -&gt; new NotFoundException(</span>
+                            &quot;Không tìm thấy bệnh nhân với user ID: &quot; + patientUserId));
+        }
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (patientId != null) {</span>
+<span class="nc" id="L171">            Patient patient = patientRepository.findById(patientId)</span>
+<span class="nc" id="L172">                    .orElseThrow(() -&gt; new NotFoundException(</span>
+                            &quot;Không tìm thấy bệnh nhân với ID: &quot; + patientId));
+<span class="nc bnc" id="L174" title="All 2 branches missed.">            if (patient.getUser() == null) {</span>
+<span class="nc" id="L175">                throw new ConflictException(&quot;Bệnh nhân không có thông tin người dùng hợp lệ.&quot;);</span>
+            }
+<span class="nc" id="L177">            return patientRepository.findByUserIdWithUserAndRole(patient.getUser().getId())</span>
+<span class="nc" id="L178">                    .orElse(patient);</span>
+        }
+
+<span class="nc" id="L181">        throw new ConflictException(&quot;Thiếu thông tin định danh bệnh nhân.&quot;);</span>
+    }
+
+    private Doctor resolveDoctor(Long doctorUserId, Long doctorId) {
+<span class="nc bnc" id="L185" title="All 2 branches missed.">        if (doctorUserId != null) {</span>
+<span class="nc" id="L186">            return doctorRepository.findByUserId(doctorUserId)</span>
+<span class="nc" id="L187">                    .orElseThrow(() -&gt; new NotFoundException(</span>
+                            &quot;Không tìm thấy bác sĩ với user ID: &quot; + doctorUserId));
+        }
+
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        if (doctorId != null) {</span>
+<span class="nc" id="L192">            Doctor doctor = doctorRepository.findByDoctorId(doctorId)</span>
+<span class="nc" id="L193">                    .orElseThrow(() -&gt; new NotFoundException(</span>
+                            &quot;Không tìm thấy bác sĩ với ID: &quot; + doctorId));
+<span class="nc bnc" id="L195" title="All 2 branches missed.">            if (doctor.getUser() == null) {</span>
+<span class="nc" id="L196">                throw new ConflictException(&quot;Bác sĩ không có thông tin người dùng hợp lệ.&quot;);</span>
+            }
+<span class="nc" id="L198">            return doctor;</span>
+        }
+
+<span class="nc" id="L201">        throw new ConflictException(&quot;Thiếu thông tin định danh bác sĩ.&quot;);</span>
+    }
+
+    private Long resolvePatientUserId(Long patientUserId, Long patientId) {
+<span class="nc" id="L205">        return resolvePatient(patientUserId, patientId).getUser().getId();</span>
+    }
+
+    private Long resolveDoctorUserId(Long doctorUserId, Long doctorId) {
+<span class="nc" id="L209">        return resolveDoctor(doctorUserId, doctorId).getUser().getId();</span>
+    }
+
+    private void validateParticipantRoles(User patientUser, User doctorUser) {
+<span class="nc bnc" id="L213" title="All 4 branches missed.">        if (patientUser == null || patientUser.getRole() == null</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">                || !&quot;PATIENT&quot;.equalsIgnoreCase(patientUser.getRole().getName())) {</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">            throw new ConflictException(&quot;Người dùng &quot; + (patientUser != null ? patientUser.getId() : null)</span>
+                    + &quot; không có vai trò 'PATIENT'.&quot;);
+        }
+
+<span class="nc bnc" id="L219" title="All 4 branches missed.">        if (doctorUser == null || doctorUser.getRole() == null</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">                || !&quot;DOCTOR&quot;.equalsIgnoreCase(doctorUser.getRole().getName())) {</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">            throw new ConflictException(&quot;Người dùng &quot; + (doctorUser != null ? doctorUser.getId() : null)</span>
+                    + &quot; không có vai trò 'DOCTOR'.&quot;);
+        }
+<span class="nc" id="L224">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

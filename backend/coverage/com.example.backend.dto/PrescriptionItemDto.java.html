@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PrescriptionItemDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.dto</a> &gt; <span class="el_source">PrescriptionItemDto.java</span></div><h1>PrescriptionItemDto.java</h1><pre class="source lang-java linenums">package com.example.backend.dto;
+
+import jakarta.validation.constraints.NotNull;
+
+public class PrescriptionItemDto {
+    private Long itemId;
+    private Long prescriptionId;
+    
+    @NotNull(message = &quot;Medicine ID is required&quot;)
+    private Long medicineId;
+    
+    private String medicineName;
+    private String dosage;
+    private String duration;
+    private String note;
+
+    // Constructors
+<span class="nc" id="L18">    public PrescriptionItemDto() {}</span>
+
+    // Constructor for response (with all fields)
+    public PrescriptionItemDto(Long itemId, Long prescriptionId, Long medicineId, String medicineName, 
+<span class="nc" id="L22">                             String dosage, String duration, String note) {</span>
+<span class="nc" id="L23">        this.itemId = itemId;</span>
+<span class="nc" id="L24">        this.prescriptionId = prescriptionId;</span>
+<span class="nc" id="L25">        this.medicineId = medicineId;</span>
+<span class="nc" id="L26">        this.medicineName = medicineName;</span>
+<span class="nc" id="L27">        this.dosage = dosage;</span>
+<span class="nc" id="L28">        this.duration = duration;</span>
+<span class="nc" id="L29">        this.note = note;</span>
+<span class="nc" id="L30">    }</span>
+
+    // Constructor for request (without itemId, prescriptionId, medicineName)
+<span class="nc" id="L33">    public PrescriptionItemDto(Long medicineId, String dosage, String duration, String note) {</span>
+<span class="nc" id="L34">        this.medicineId = medicineId;</span>
+<span class="nc" id="L35">        this.dosage = dosage;</span>
+<span class="nc" id="L36">        this.duration = duration;</span>
+<span class="nc" id="L37">        this.note = note;</span>
+<span class="nc" id="L38">    }</span>
+
+    // Getters and Setters
+<span class="nc" id="L41">    public Long getItemId() { return itemId; }</span>
+<span class="nc" id="L42">    public void setItemId(Long itemId) { this.itemId = itemId; }</span>
+
+<span class="nc" id="L44">    public Long getPrescriptionId() { return prescriptionId; }</span>
+<span class="nc" id="L45">    public void setPrescriptionId(Long prescriptionId) { this.prescriptionId = prescriptionId; }</span>
+
+<span class="nc" id="L47">    public Long getMedicineId() { return medicineId; }</span>
+<span class="nc" id="L48">    public void setMedicineId(Long medicineId) { this.medicineId = medicineId; }</span>
+
+<span class="nc" id="L50">    public String getMedicineName() { return medicineName; }</span>
+<span class="nc" id="L51">    public void setMedicineName(String medicineName) { this.medicineName = medicineName; }</span>
+
+<span class="nc" id="L53">    public String getDosage() { return dosage; }</span>
+<span class="nc" id="L54">    public void setDosage(String dosage) { this.dosage = dosage; }</span>
+
+<span class="nc" id="L56">    public String getDuration() { return duration; }</span>
+<span class="nc" id="L57">    public void setDuration(String duration) { this.duration = duration; }</span>
+
+<span class="nc" id="L59">    public String getNote() { return note; }</span>
+<span class="nc" id="L60">    public void setNote(String note) { this.note = note; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

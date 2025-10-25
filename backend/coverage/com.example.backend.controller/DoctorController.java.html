@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DoctorController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.controller</a> &gt; <span class="el_source">DoctorController.java</span></div><h1>DoctorController.java</h1><pre class="source lang-java linenums">package com.example.backend.controller;
+
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.backend.model.Doctor;
+import com.example.backend.service.DoctorService;
+
+import lombok.RequiredArgsConstructor;
+
+/**
+ * REST Controller cho Doctor entity
+ * Cung cấp các API endpoints để quản lý thông tin bác sĩ
+ */
+@RestController
+@RequestMapping(&quot;/api/doctors&quot;)
+@RequiredArgsConstructor
+@CrossOrigin(origins = &quot;*&quot;)
+public class DoctorController {
+
+    private final DoctorService doctorService;
+
+
+    /**
+     * Lấy tất cả bác sĩ với thông tin User và Role
+     * GET /api/doctors
+     */
+    @GetMapping
+    public ResponseEntity&lt;List&lt;Doctor&gt;&gt; getAllDoctorsWithUserAndRole() {
+<span class="nc" id="L35">        List&lt;Doctor&gt; doctors = doctorService.getAllDoctorsWithUserAndRole();</span>
+<span class="nc" id="L36">        return ResponseEntity.ok(doctors);</span>
+    }
+
+    /**
+     * Lấy bác sĩ theo ID với thông tin User và Role
+     * GET /api/doctors/{doctorId}
+     */
+    @GetMapping(&quot;/{doctorId}&quot;)
+    public ResponseEntity&lt;Doctor&gt; getDoctorByIdWithUserAndRole(@PathVariable Long doctorId) {
+<span class="nc" id="L45">        Doctor doctor = doctorService.getDoctorByIdWithUserAndRole(doctorId);</span>
+<span class="nc" id="L46">        return ResponseEntity.ok(doctor);</span>
+    }
+
+    /**
+     * Lấy bác sĩ theo chuyên khoa với thông tin User và Role
+     * GET /api/doctors/specialty/{specialty}
+     */
+    @GetMapping(&quot;/specialty/{specialty}&quot;)
+    public ResponseEntity&lt;List&lt;Doctor&gt;&gt; getDoctorsBySpecialtyWithUserAndRole(@PathVariable String specialty) {
+<span class="nc" id="L55">        List&lt;Doctor&gt; doctors = doctorService.getDoctorsBySpecialtyWithUserAndRole(specialty);</span>
+<span class="nc" id="L56">        return ResponseEntity.ok(doctors);</span>
+    }
+
+    /**
+     * Lấy bác sĩ theo khoa với thông tin User và Role
+     * GET /api/doctors/department/{departmentId}
+     */
+    @GetMapping(&quot;/department/{departmentId}&quot;)
+    public ResponseEntity&lt;List&lt;Doctor&gt;&gt; getDoctorsByDepartmentWithUserAndRole(@PathVariable Long departmentId) {
+<span class="nc" id="L65">        List&lt;Doctor&gt; doctors = doctorService.getDoctorsByDepartmentWithUserAndRole(departmentId);</span>
+<span class="nc" id="L66">        return ResponseEntity.ok(doctors);</span>
+    }
+
+    /**
+     * Tìm bác sĩ theo tên với thông tin User và Role
+     * GET /api/doctors/search?keyword={keyword}
+     */
+    @GetMapping(&quot;/search&quot;)
+    public ResponseEntity&lt;List&lt;Doctor&gt;&gt; getDoctorsByNameWithUserAndRole(@RequestParam String keyword) {
+<span class="nc" id="L75">        List&lt;Doctor&gt; doctors = doctorService.getDoctorsByNameWithUserAndRole(keyword);</span>
+<span class="nc" id="L76">        return ResponseEntity.ok(doctors);</span>
+    }
+
+    /**
+     * Lấy bác sĩ theo userId
+     * GET /api/doctors/user/{userId}
+     */
+    @GetMapping(&quot;/user/{userId}&quot;)
+    public ResponseEntity&lt;Doctor&gt; getDoctorByUserId(@PathVariable Long userId) {
+<span class="nc" id="L85">        Doctor doctor = doctorService.getDoctorByUserId(userId);</span>
+<span class="nc" id="L86">        return ResponseEntity.ok(doctor);</span>
+    }
+
+    /**
+     * Đăng ký bác sĩ mới (tạo cả User và Doctor)
+     * POST /api/doctors/register
+     */
+    @PostMapping(&quot;/register&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; registerDoctor(@RequestBody DoctorService.DoctorRegisterRequest request) {
+        try {
+<span class="nc" id="L96">            doctorService.registerDoctor(request);</span>
+            
+            // Lấy doctor vừa tạo để trả về
+<span class="nc" id="L99">            List&lt;Doctor&gt; doctors = doctorService.getAllDoctorsWithUserAndRole();</span>
+<span class="nc" id="L100">            Doctor newDoctor = doctors.stream()</span>
+<span class="nc bnc" id="L101" title="All 4 branches missed.">                .filter(d -&gt; d.getUser() != null &amp;&amp; d.getUser().getEmail().equals(request.getEmail()))</span>
+<span class="nc" id="L102">                .findFirst()</span>
+<span class="nc" id="L103">                .orElse(null);</span>
+            
+<span class="nc" id="L105">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            if (newDoctor != null) {</span>
+<span class="nc" id="L107">                response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L108">                response.put(&quot;message&quot;, &quot;Đăng ký bác sĩ thành công&quot;);</span>
+<span class="nc" id="L109">                response.put(&quot;doctor&quot;, newDoctor);</span>
+            } else {
+<span class="nc" id="L111">                response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L112">                response.put(&quot;message&quot;, &quot;Đăng ký bác sĩ thành công nhưng không thể lấy thông tin doctor&quot;);</span>
+            }
+            
+<span class="nc" id="L115">            return ResponseEntity.status(HttpStatus.CREATED).body(response);</span>
+<span class="nc" id="L116">        } catch (Exception e) {</span>
+<span class="nc" id="L117">            Map&lt;String, Object&gt; errorResponse = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L118">            errorResponse.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L119">            errorResponse.put(&quot;message&quot;, &quot;Lỗi khi đăng ký bác sĩ: &quot; + e.getMessage());</span>
+<span class="nc" id="L120">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);</span>
+        }
+    }
+
+    /**
+     * Tạo bác sĩ mới
+     * POST /api/doctors
+     */
+    @PostMapping
+    public ResponseEntity&lt;Doctor&gt; createDoctor(@RequestBody CreateDoctorRequest request) {
+<span class="nc" id="L130">        Doctor doctor = doctorService.createDoctor(</span>
+<span class="nc" id="L131">            request.getUserId(),</span>
+<span class="nc" id="L132">            request.getBio(),</span>
+<span class="nc" id="L133">            request.getSpecialty(),</span>
+<span class="nc" id="L134">            request.getDepartmentId()</span>
+        );
+<span class="nc" id="L136">        return ResponseEntity.status(HttpStatus.CREATED).body(doctor);</span>
+    }
+
+    /**
+     * Cập nhật thông tin bác sĩ
+     * PUT /api/doctors/{doctorId}
+     */
+    @PutMapping(&quot;/{doctorId}&quot;)
+    public ResponseEntity&lt;Doctor&gt; updateDoctor(@PathVariable Long doctorId, @RequestBody UpdateDoctorRequest request) {
+<span class="nc" id="L145">        Doctor doctor = doctorService.updateDoctor(</span>
+            doctorId,
+<span class="nc" id="L147">            request.getBio(),</span>
+<span class="nc" id="L148">            request.getSpecialty(),</span>
+<span class="nc" id="L149">            request.getDepartmentId(),</span>
+<span class="nc" id="L150">            request.getStatus()</span>
+        );
+<span class="nc" id="L152">        return ResponseEntity.ok(doctor);</span>
+    }
+
+    /**
+     * Cập nhật thông tin bác sĩ và user
+     * PUT /api/doctors/{doctorId}/with-user
+     */
+    @PutMapping(&quot;/{doctorId}/with-user&quot;)
+    public ResponseEntity&lt;Doctor&gt; updateDoctorWithUser(@PathVariable Long doctorId, @RequestBody UpdateDoctorWithUserRequest request) {
+<span class="nc" id="L161">        Doctor doctor = doctorService.updateDoctorWithUser(</span>
+            doctorId,
+<span class="nc" id="L163">            request.getBio(),</span>
+<span class="nc" id="L164">            request.getSpecialty(),</span>
+<span class="nc" id="L165">            request.getDepartmentId(),</span>
+<span class="nc" id="L166">            request.getStatus(),</span>
+<span class="nc" id="L167">            request.getEmail(),</span>
+<span class="nc" id="L168">            request.getFirstName(),</span>
+<span class="nc" id="L169">            request.getLastName(),</span>
+<span class="nc" id="L170">            request.getPhone(),</span>
+<span class="nc" id="L171">            request.getAvatarUrl()</span>
+        );
+<span class="nc" id="L173">        return ResponseEntity.ok(doctor);</span>
+    }
+
+    /**
+     * Xóa bác sĩ (soft delete)
+     * DELETE /api/doctors/{doctorId}
+     */
+    @DeleteMapping(&quot;/{doctorId}&quot;)
+    public ResponseEntity&lt;Void&gt; deleteDoctor(@PathVariable Long doctorId) {
+<span class="nc" id="L182">        doctorService.deleteDoctor(doctorId);</span>
+<span class="nc" id="L183">        return ResponseEntity.noContent().build();</span>
+    }
+
+
+    /**
+     * Kiểm tra user đã có thông tin bác sĩ chưa
+     * GET /api/doctors/check/{userId}
+     */
+    @GetMapping(&quot;/check/{userId}&quot;)
+    public ResponseEntity&lt;Boolean&gt; isUserDoctor(@PathVariable Long userId) {
+<span class="nc" id="L193">        boolean isDoctor = doctorService.isUserDoctor(userId);</span>
+<span class="nc" id="L194">        return ResponseEntity.ok(isDoctor);</span>
+    }
+
+    /**
+     * Request DTO cho tạo bác sĩ mới
+     */
+<span class="nc" id="L200">    public static class CreateDoctorRequest {</span>
+        private Long userId;
+        private String bio;
+        private String specialty;
+        private Long departmentId;
+
+        // Getters and Setters
+<span class="nc" id="L207">        public Long getUserId() { return userId; }</span>
+<span class="nc" id="L208">        public void setUserId(Long userId) { this.userId = userId; }</span>
+        
+<span class="nc" id="L210">        public String getBio() { return bio; }</span>
+<span class="nc" id="L211">        public void setBio(String bio) { this.bio = bio; }</span>
+        
+<span class="nc" id="L213">        public String getSpecialty() { return specialty; }</span>
+<span class="nc" id="L214">        public void setSpecialty(String specialty) { this.specialty = specialty; }</span>
+        
+<span class="nc" id="L216">        public Long getDepartmentId() { return departmentId; }</span>
+<span class="nc" id="L217">        public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }</span>
+    }
+
+    /**
+     * Request DTO cho cập nhật bác sĩ
+     */
+<span class="nc" id="L223">    public static class UpdateDoctorRequest {</span>
+        private String bio;
+        private String specialty;
+        private Long departmentId;
+        private String status;
+
+        // Getters and Setters
+<span class="nc" id="L230">        public String getBio() { return bio; }</span>
+<span class="nc" id="L231">        public void setBio(String bio) { this.bio = bio; }</span>
+        
+<span class="nc" id="L233">        public String getSpecialty() { return specialty; }</span>
+<span class="nc" id="L234">        public void setSpecialty(String specialty) { this.specialty = specialty; }</span>
+        
+<span class="nc" id="L236">        public Long getDepartmentId() { return departmentId; }</span>
+<span class="nc" id="L237">        public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }</span>
+        
+<span class="nc" id="L239">        public String getStatus() { return status; }</span>
+<span class="nc" id="L240">        public void setStatus(String status) { this.status = status; }</span>
+    }
+
+    /**
+     * Request DTO cho cập nhật bác sĩ và user
+     */
+<span class="nc" id="L246">    public static class UpdateDoctorWithUserRequest {</span>
+        private String bio;
+        private String specialty;
+        private Long departmentId;
+        private String status;
+        private String email;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private String avatarUrl;
+
+        // Getters and Setters
+<span class="nc" id="L258">        public String getBio() { return bio; }</span>
+<span class="nc" id="L259">        public void setBio(String bio) { this.bio = bio; }</span>
+        
+<span class="nc" id="L261">        public String getSpecialty() { return specialty; }</span>
+<span class="nc" id="L262">        public void setSpecialty(String specialty) { this.specialty = specialty; }</span>
+        
+<span class="nc" id="L264">        public Long getDepartmentId() { return departmentId; }</span>
+<span class="nc" id="L265">        public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }</span>
+        
+<span class="nc" id="L267">        public String getStatus() { return status; }</span>
+<span class="nc" id="L268">        public void setStatus(String status) { this.status = status; }</span>
+
+<span class="nc" id="L270">        public String getEmail() { return email; }</span>
+<span class="nc" id="L271">        public void setEmail(String email) { this.email = email; }</span>
+
+<span class="nc" id="L273">        public String getFirstName() { return firstName; }</span>
+<span class="nc" id="L274">        public void setFirstName(String firstName) { this.firstName = firstName; }</span>
+
+<span class="nc" id="L276">        public String getLastName() { return lastName; }</span>
+<span class="nc" id="L277">        public void setLastName(String lastName) { this.lastName = lastName; }</span>
+
+<span class="nc" id="L279">        public String getPhone() { return phone; }</span>
+<span class="nc" id="L280">        public void setPhone(String phone) { this.phone = phone; }</span>
+
+<span class="nc" id="L282">        public String getAvatarUrl() { return avatarUrl; }</span>
+<span class="nc" id="L283">        public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

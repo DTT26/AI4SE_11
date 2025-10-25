@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AppointmentDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.dto</a> &gt; <span class="el_source">AppointmentDTO.java</span></div><h1>AppointmentDTO.java</h1><pre class="source lang-java linenums">package com.example.backend.dto;
+
+import java.time.LocalDateTime;
+import java.math.BigDecimal;
+
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+<span class="nc" id="L12">public class AppointmentDTO {</span>
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Create {
+        // PatientID có thể null khi bác sĩ tạo slot trống
+        private Long patientId;
+
+        @NotNull(message = &quot;DoctorID không được để trống&quot;)
+        private Long doctorId;
+
+        @NotNull(message = &quot;ScheduleID không được để trống - Phải chọn lịch trình làm việc&quot;)
+        private Long scheduleId;
+
+        @NotNull(message = &quot;Ngày bắt đầu không được để trống&quot;)
+        // Bỏ @Future để cho phép tạo slot cho hiện tại/quá khứ
+        // Validation chi tiết được xử lý trong Service
+        private LocalDateTime startTime;
+
+        @NotNull(message = &quot;Ngày kết thúc không được để trống&quot;)
+        // Bỏ @Future để cho phép tạo slot cho hiện tại/quá khứ
+        private LocalDateTime endTime;
+
+        @Size(max = 255, message = &quot;Ghi chú không quá 255 ký tự&quot;)
+        private String notes;
+
+        private BigDecimal fee;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Update {
+        // Bỏ @Future để linh hoạt hơn
+        private LocalDateTime startTime;
+
+        private LocalDateTime endTime;
+
+        @Size(max = 30, message = &quot;Trạng thái không quá 30 ký tự&quot;)
+        private String status;
+
+        @Size(max = 255, message = &quot;Ghi chú không quá 255 ký tự&quot;)
+        private String notes;
+
+        private BigDecimal fee;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Response {
+    private Long appointmentId;
+    private Long patientId;
+    private String patientName;
+    private Long doctorId;
+    private String doctorName;
+    private Long scheduleId;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private String status;
+    private String notes;
+    private BigDecimal fee;
+    }
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

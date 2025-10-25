@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.mapper</a> &gt; <span class="el_source">PaymentMapper.java</span></div><h1>PaymentMapper.java</h1><pre class="source lang-java linenums">package com.example.backend.mapper;
+
+import com.example.backend.dto.PaymentDTO;
+import com.example.backend.model.Payment;
+import org.springframework.stereotype.Component;
+
+@Component
+<span class="nc" id="L8">public class PaymentMapper {</span>
+    
+    public PaymentDTO.Response toResponseDTO(Payment payment) {
+<span class="nc bnc" id="L11" title="All 2 branches missed.">        if (payment == null) {</span>
+<span class="nc" id="L12">            return null;</span>
+        }
+        
+<span class="nc" id="L15">        PaymentDTO.Response dto = new PaymentDTO.Response();</span>
+<span class="nc" id="L16">        dto.setPaymentId(payment.getPaymentId());</span>
+<span class="nc" id="L17">        dto.setPayOSPaymentId(payment.getPayOSPaymentId());</span>
+<span class="nc" id="L18">        dto.setAmount(payment.getAmount());</span>
+<span class="nc" id="L19">        dto.setCurrency(payment.getCurrency());</span>
+<span class="nc" id="L20">        dto.setStatus(payment.getStatus());</span>
+<span class="nc" id="L21">        dto.setPaymentMethod(payment.getPaymentMethod());</span>
+<span class="nc" id="L22">        dto.setPayOSCode(payment.getPayOSCode());</span>
+<span class="nc" id="L23">        dto.setPayOSLink(payment.getPayOSLink());</span>
+<span class="nc" id="L24">        dto.setDescription(payment.getDescription());</span>
+<span class="nc" id="L25">        dto.setCreatedAt(payment.getCreatedAt());</span>
+<span class="nc" id="L26">        dto.setUpdatedAt(payment.getUpdatedAt());</span>
+<span class="nc" id="L27">        dto.setPaidAt(payment.getPaidAt());</span>
+<span class="nc" id="L28">        dto.setFailureReason(payment.getFailureReason());</span>
+        
+        // Map appointment info if available
+<span class="nc bnc" id="L31" title="All 2 branches missed.">        if (payment.getAppointment() != null) {</span>
+<span class="nc" id="L32">            dto.setAppointmentId(payment.getAppointment().getAppointmentId());</span>
+            
+<span class="nc bnc" id="L34" title="All 2 branches missed.">            if (payment.getAppointment().getPatient() != null &amp;&amp; </span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">                payment.getAppointment().getPatient().getUser() != null) {</span>
+<span class="nc" id="L36">                String patientName = payment.getAppointment().getPatient().getUser().getFirstName() + </span>
+<span class="nc" id="L37">                                   &quot; &quot; + payment.getAppointment().getPatient().getUser().getLastName();</span>
+<span class="nc" id="L38">                dto.setPatientName(patientName);</span>
+            }
+            
+<span class="nc bnc" id="L41" title="All 2 branches missed.">            if (payment.getAppointment().getDoctor() != null &amp;&amp; </span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">                payment.getAppointment().getDoctor().getUser() != null) {</span>
+<span class="nc" id="L43">                String doctorName = payment.getAppointment().getDoctor().getUser().getFirstName() + </span>
+<span class="nc" id="L44">                                 &quot; &quot; + payment.getAppointment().getDoctor().getUser().getLastName();</span>
+<span class="nc" id="L45">                dto.setDoctorName(doctorName);</span>
+            }
+            
+<span class="nc bnc" id="L48" title="All 2 branches missed.">            if (payment.getAppointment().getStartTime() != null) {</span>
+<span class="nc" id="L49">                dto.setAppointmentDate(payment.getAppointment().getStartTime().toString());</span>
+            }
+        }
+        
+<span class="nc" id="L53">        return dto;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,565 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.controller</a> &gt; <span class="el_source">UserController.java</span></div><h1>UserController.java</h1><pre class="source lang-java linenums">package com.example.backend.controller;
+
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.Map;
+import java.util.HashMap;
+
+import com.example.backend.model.User;
+import com.example.backend.model.Patient;
+import com.example.backend.service.UserService;
+import com.example.backend.service.PatientService;
+import com.example.backend.dto.UserWithPatientInfoDTO;
+
+import lombok.RequiredArgsConstructor;
+
+/**
+ * REST Controller cho User entity
+ * Cung cấp các API endpoints để quản lý thông tin người dùng
+ */
+@RestController
+@RequestMapping(&quot;/api/users&quot;)
+@RequiredArgsConstructor
+@CrossOrigin(origins = &quot;*&quot;)
+public class UserController {
+
+    private final UserService userService;
+    private final PatientService patientService;
+
+    /**
+     * Lấy tất cả user với thông tin role
+     * GET /api/users
+     */
+    @GetMapping
+    public ResponseEntity&lt;Page&lt;User&gt;&gt; getAllUsersWithRole(Pageable pageable) {
+<span class="nc" id="L41">        Page&lt;User&gt; users = userService.getAllUsersWithRole(pageable);</span>
+<span class="nc" id="L42">        return ResponseEntity.ok(users);</span>
+    }
+
+    /**
+     * Lấy thông tin user hiện tại
+     * GET /api/users/me
+     */
+    @GetMapping(&quot;/me&quot;)
+    public ResponseEntity&lt;User&gt; getCurrentUser(@RequestHeader(value = &quot;Authorization&quot;, required = false) String authHeader) {
+        try {
+            // For testing, return the Google user directly
+<span class="nc" id="L53">            User user = userService.getCurrentUserFromToken(authHeader);</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">            if (user != null) {</span>
+<span class="nc" id="L55">                return ResponseEntity.ok(user);</span>
+            } else {
+<span class="nc" id="L57">                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</span>
+            }
+<span class="nc" id="L59">        } catch (Exception e) {</span>
+<span class="nc" id="L60">            System.err.println(&quot;Error in /api/users/me: &quot; + e.getMessage());</span>
+<span class="nc" id="L61">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();</span>
+        }
+    }
+
+    /**
+     * Lấy user theo ID với thông tin role
+     * GET /api/users/{userId}
+     */
+    @GetMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;User&gt; getUserByIdWithRole(@PathVariable Long userId) {
+<span class="nc" id="L71">        User user = userService.getUserByIdWithRole(userId);</span>
+<span class="nc" id="L72">        return ResponseEntity.ok(user);</span>
+    }
+
+    /**
+     * Lấy user theo email với thông tin role
+     * GET /api/users/email/{email}
+     */
+    @GetMapping(&quot;/email/{email}&quot;)
+    public ResponseEntity&lt;User&gt; getUserByEmailWithRole(@PathVariable String email) {
+<span class="nc" id="L81">        User user = userService.getUserByEmailWithRole(email);</span>
+<span class="nc" id="L82">        return ResponseEntity.ok(user);</span>
+    }
+
+    /**
+     * Tìm user với các bộ lọc
+     * GET /api/users/search?email=...&amp;firstName=...&amp;lastName=...&amp;status=...&amp;roleId=...
+     */
+    @GetMapping(&quot;/search&quot;)
+    public ResponseEntity&lt;Page&lt;User&gt;&gt; searchUsersWithFilters(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
+            @RequestParam(required = false) User.UserStatus status,
+            @RequestParam(required = false) Long roleId,
+            Pageable pageable) {
+        
+<span class="nc" id="L98">        Page&lt;User&gt; users = userService.searchUsersWithFilters(email, firstName, lastName, status, roleId, pageable);</span>
+<span class="nc" id="L99">        return ResponseEntity.ok(users);</span>
+    }
+
+    /**
+     * Lấy tất cả user với thông tin role
+     * GET /api/users/with-roles-info
+     */
+    @GetMapping(&quot;/with-roles-info&quot;)
+    public ResponseEntity&lt;List&lt;User&gt;&gt; getAllUsersWithRoleInfo() {
+<span class="nc" id="L108">        List&lt;User&gt; users = userService.getAllUsersWithRoleInfo();</span>
+<span class="nc" id="L109">        return ResponseEntity.ok(users);</span>
+    }
+
+    /**
+     * Lấy tất cả user với thông tin role và thông tin bệnh nhân (nếu có)
+     * GET /api/users/with-patient-info
+     */
+    @GetMapping(&quot;/with-patient-info&quot;)
+    public ResponseEntity&lt;List&lt;UserWithPatientInfoDTO&gt;&gt; getAllUsersWithPatientInfo() {
+<span class="nc" id="L118">        List&lt;UserWithPatientInfoDTO&gt; users = userService.getAllUsersWithPatientInfo();</span>
+<span class="nc" id="L119">        return ResponseEntity.ok(users);</span>
+    }
+
+    /**
+     * Lấy user theo roleId với thông tin role
+     * GET /api/users/role/{roleId}/with-roles-info
+     */
+    @GetMapping(&quot;/role/{roleId}/with-roles-info&quot;)
+    public ResponseEntity&lt;List&lt;User&gt;&gt; getUsersByRoleIdWithRoleInfo(@PathVariable Long roleId) {
+<span class="nc" id="L128">        List&lt;User&gt; users = userService.getUsersByRoleIdWithRoleInfo(roleId);</span>
+<span class="nc" id="L129">        return ResponseEntity.ok(users);</span>
+    }
+
+    /**
+     * Tìm user theo tên với thông tin role
+     * GET /api/users/search-with-roles-info?keyword={keyword}
+     */
+    @GetMapping(&quot;/search-with-roles-info&quot;)
+    public ResponseEntity&lt;List&lt;User&gt;&gt; getUsersByNameWithRoleInfo(@RequestParam String keyword) {
+<span class="nc" id="L138">        List&lt;User&gt; users = userService.getUsersByNameWithRoleInfo(keyword);</span>
+<span class="nc" id="L139">        return ResponseEntity.ok(users);</span>
+    }
+
+    /**
+     * Tạo user mới
+     * POST /api/users
+     */
+    @PostMapping
+    public ResponseEntity&lt;User&gt; createUser(@RequestBody CreateUserRequest request) {
+<span class="nc" id="L148">        User user = userService.createUser(</span>
+<span class="nc" id="L149">            request.getEmail(),</span>
+<span class="nc" id="L150">            request.getPasswordHash(),</span>
+<span class="nc" id="L151">            request.getFirstName(),</span>
+<span class="nc" id="L152">            request.getLastName(),</span>
+<span class="nc" id="L153">            request.getPhone(),</span>
+<span class="nc" id="L154">            request.getGender(),</span>
+<span class="nc" id="L155">            request.getDateOfBirth(),</span>
+<span class="nc" id="L156">            request.getAddress(),</span>
+<span class="nc" id="L157">            request.getAvatarUrl(),</span>
+<span class="nc" id="L158">            request.getRoleId()</span>
+        );
+<span class="nc" id="L160">        return ResponseEntity.status(HttpStatus.CREATED).body(user);</span>
+    }
+
+    /**
+     * Cập nhật thông tin user
+     * PUT /api/users/{userId}
+     */
+    @PutMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;User&gt; updateUser(@PathVariable Long userId, @RequestBody UpdateUserRequest request) {
+<span class="nc" id="L169">        System.out.println(&quot;Received update request for user &quot; + userId);</span>
+<span class="nc" id="L170">        System.out.println(&quot;Address in request: &quot; + request.getAddress());</span>
+        
+<span class="nc" id="L172">        User user = userService.updateUser(</span>
+            userId,
+<span class="nc" id="L174">            request.getEmail(),</span>
+<span class="nc" id="L175">            request.getPasswordHash(),</span>
+<span class="nc" id="L176">            request.getFirstName(),</span>
+<span class="nc" id="L177">            request.getLastName(),</span>
+<span class="nc" id="L178">            request.getPhone(),</span>
+<span class="nc" id="L179">            request.getGender(),</span>
+<span class="nc" id="L180">            request.getDateOfBirth(),</span>
+<span class="nc" id="L181">            request.getAddress(),</span>
+<span class="nc" id="L182">            request.getAvatarUrl(),</span>
+<span class="nc" id="L183">            request.getStatus(),</span>
+<span class="nc" id="L184">            request.getRoleId()</span>
+        );
+<span class="nc" id="L186">        return ResponseEntity.ok(user);</span>
+    }
+
+    /**
+     * Xóa user (soft delete)
+     * DELETE /api/users/{userId}
+     */
+    @DeleteMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;Void&gt; deleteUser(@PathVariable Long userId) {
+<span class="nc" id="L195">        userService.deleteUser(userId);</span>
+<span class="nc" id="L196">        return ResponseEntity.noContent().build();</span>
+    }
+
+    /**
+     * Xóa user vĩnh viễn (hard delete)
+     * DELETE /api/users/{userId}/hard
+     */
+    @DeleteMapping(&quot;/{userId}/hard&quot;)
+    public ResponseEntity&lt;Void&gt; hardDeleteUser(@PathVariable Long userId) {
+<span class="nc" id="L205">        userService.hardDeleteUser(userId);</span>
+<span class="nc" id="L206">        return ResponseEntity.noContent().build();</span>
+    }
+
+    /**
+     * Cập nhật avatar cho user
+     * PUT /api/users/{userId}/avatar
+     */
+    @PutMapping(&quot;/{userId}/avatar&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; updateUserAvatar(
+            @PathVariable Long userId, 
+            @RequestParam String avatarUrl) {
+<span class="nc" id="L217">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+        try {
+<span class="nc" id="L219">            User user = userService.getUserByIdWithRole(userId);</span>
+<span class="nc" id="L220">            user.setAvatarUrl(avatarUrl);</span>
+<span class="nc" id="L221">            User updatedUser = userService.updateUser(userId, </span>
+<span class="nc" id="L222">                user.getEmail(), null, user.getFirstName(), user.getLastName(),</span>
+<span class="nc" id="L223">                user.getPhone(), user.getGender(), user.getDateOfBirth(),</span>
+<span class="nc" id="L224">                user.getAddress(), avatarUrl, user.getStatus(), user.getRole().getId());</span>
+            
+<span class="nc" id="L226">            response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L227">            response.put(&quot;message&quot;, &quot;Cập nhật avatar thành công&quot;);</span>
+<span class="nc" id="L228">            response.put(&quot;user&quot;, updatedUser);</span>
+<span class="nc" id="L229">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L230">        } catch (Exception e) {</span>
+<span class="nc" id="L231">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L232">            response.put(&quot;message&quot;, &quot;Lỗi khi cập nhật avatar: &quot; + e.getMessage());</span>
+<span class="nc" id="L233">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+
+    /**
+     * Đổi mật khẩu cho user đã đăng nhập
+     * PUT /api/users/{userId}/change-password
+     */
+    @PutMapping(&quot;/{userId}/change-password&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; changePassword(
+            @PathVariable Long userId,
+            @RequestBody ChangePasswordRequest request) {
+<span class="nc" id="L245">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+        try {
+<span class="nc" id="L247">            User user = userService.getUserByIdWithRole(userId);</span>
+            
+            // Kiểm tra mật khẩu hiện tại
+<span class="nc bnc" id="L250" title="All 2 branches missed.">            if (!userService.matchesPassword(request.getCurrentPassword(), user.getPasswordHash())) {</span>
+<span class="nc" id="L251">                response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L252">                response.put(&quot;message&quot;, &quot;Mật khẩu hiện tại không chính xác&quot;);</span>
+<span class="nc" id="L253">                return ResponseEntity.badRequest().body(response);</span>
+            }
+            
+            // Cập nhật mật khẩu mới bằng cách gọi updateUser
+<span class="nc" id="L257">            userService.updateUser(</span>
+                userId,
+<span class="nc" id="L259">                user.getEmail(),</span>
+<span class="nc" id="L260">                request.getNewPassword(), // passwordHash</span>
+<span class="nc" id="L261">                user.getFirstName(),</span>
+<span class="nc" id="L262">                user.getLastName(),</span>
+<span class="nc" id="L263">                user.getPhone(),</span>
+<span class="nc" id="L264">                user.getGender(),</span>
+<span class="nc" id="L265">                user.getDateOfBirth(),</span>
+<span class="nc" id="L266">                user.getAddress(),</span>
+<span class="nc" id="L267">                user.getAvatarUrl(),</span>
+<span class="nc" id="L268">                user.getStatus(),</span>
+<span class="nc" id="L269">                user.getRole().getId()</span>
+            );
+            
+<span class="nc" id="L272">            response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L273">            response.put(&quot;message&quot;, &quot;Đổi mật khẩu thành công&quot;);</span>
+<span class="nc" id="L274">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L275">        } catch (Exception e) {</span>
+<span class="nc" id="L276">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L277">            response.put(&quot;message&quot;, &quot;Lỗi khi đổi mật khẩu: &quot; + e.getMessage());</span>
+<span class="nc" id="L278">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+
+    /**
+     * Đếm số user theo roleId
+     * GET /api/users/count-by-role/{roleId}
+     */
+    @GetMapping(&quot;/count-by-role/{roleId}&quot;)
+    public ResponseEntity&lt;Long&gt; countUsersByRoleId(@PathVariable Long roleId) {
+<span class="nc" id="L288">        long count = userService.countUsersByRoleId(roleId);</span>
+<span class="nc" id="L289">        return ResponseEntity.ok(count);</span>
+    }
+
+    /**
+     * Kiểm tra email đã tồn tại chưa
+     * GET /api/users/check-email/{email}
+     */
+    @GetMapping(&quot;/check-email/{email}&quot;)
+    public ResponseEntity&lt;Boolean&gt; isEmailExists(@PathVariable String email) {
+<span class="nc" id="L298">        boolean exists = userService.isEmailExists(email);</span>
+<span class="nc" id="L299">        return ResponseEntity.ok(exists);</span>
+    }
+
+    /**
+     * Upload ảnh đại diện cho user
+     * POST /api/users/{userId}/upload-avatar
+     */
+    @PostMapping(&quot;/{userId}/upload-avatar&quot;)
+    public ResponseEntity&lt;String&gt; uploadAvatar(@PathVariable Long userId, @RequestParam(&quot;file&quot;) MultipartFile file) {
+        try {
+<span class="nc" id="L309">            String avatarUrl = userService.uploadAvatar(userId, file);</span>
+<span class="nc" id="L310">            return ResponseEntity.ok(avatarUrl);</span>
+<span class="nc" id="L311">        } catch (Exception e) {</span>
+<span class="nc" id="L312">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L313">                .body(&quot;Lỗi khi upload ảnh: &quot; + e.getMessage());</span>
+        }
+    }
+
+    /**
+     * Cập nhật profile bao gồm cả Patient information
+     * PUT /api/users/{userId}/profile
+     */
+    @PutMapping(&quot;/{userId}/profile&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; updateUserProfile(@PathVariable Long userId, @RequestBody UpdateProfileRequest request) {
+<span class="nc" id="L323">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+        try {
+            // Cập nhật User information
+<span class="nc" id="L326">            User user = userService.updateUser(</span>
+                userId,
+<span class="nc" id="L328">                request.getEmail(),</span>
+<span class="nc" id="L329">                request.getPasswordHash(),</span>
+<span class="nc" id="L330">                request.getFirstName(),</span>
+<span class="nc" id="L331">                request.getLastName(),</span>
+<span class="nc" id="L332">                request.getPhone(),</span>
+<span class="nc" id="L333">                request.getGender(),</span>
+<span class="nc" id="L334">                request.getDateOfBirth(),</span>
+<span class="nc" id="L335">                request.getAddress(),</span>
+<span class="nc" id="L336">                request.getAvatarUrl(),</span>
+<span class="nc" id="L337">                request.getStatus(),</span>
+<span class="nc" id="L338">                request.getRoleId()</span>
+            );
+
+            // Nếu user là Patient, cập nhật Patient information
+<span class="nc bnc" id="L342" title="All 4 branches missed.">            if (user.getRole() != null &amp;&amp; &quot;PATIENT&quot;.equals(user.getRole().getName())) {</span>
+                try {
+                    // Kiểm tra xem user đã có Patient record chưa
+<span class="nc" id="L345">                    boolean hasPatientRecord = patientService.isUserPatient(userId);</span>
+                    
+<span class="nc bnc" id="L347" title="All 2 branches missed.">                    if (hasPatientRecord) {</span>
+                        // Cập nhật Patient information hiện có
+<span class="nc" id="L349">                        Patient patient = patientService.getPatientByUserId(userId);</span>
+<span class="nc" id="L350">                        patientService.updatePatient(</span>
+<span class="nc" id="L351">                            patient.getPatientId(),</span>
+<span class="nc" id="L352">                            request.getHealthInsurance(),</span>
+<span class="nc" id="L353">                            request.getMedicalHistory(),</span>
+                            null // status không thay đổi
+                        );
+<span class="nc" id="L356">                    } else {</span>
+                        // Tạo Patient record mới
+<span class="nc" id="L358">                        patientService.createPatient(</span>
+                            userId,
+<span class="nc" id="L360">                            request.getHealthInsurance(),</span>
+<span class="nc" id="L361">                            request.getMedicalHistory()</span>
+                        );
+                    }
+<span class="nc" id="L364">                } catch (Exception e) {</span>
+<span class="nc" id="L365">                    System.err.println(&quot;Error updating patient info: &quot; + e.getMessage());</span>
+<span class="nc" id="L366">                    e.printStackTrace();</span>
+                    // Không throw exception, chỉ log lỗi
+<span class="nc" id="L368">                }</span>
+            }
+
+<span class="nc" id="L371">            response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L372">            response.put(&quot;message&quot;, &quot;Cập nhật profile thành công&quot;);</span>
+<span class="nc" id="L373">            response.put(&quot;user&quot;, user);</span>
+<span class="nc" id="L374">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L375">        } catch (Exception e) {</span>
+<span class="nc" id="L376">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L377">            response.put(&quot;message&quot;, &quot;Lỗi khi cập nhật profile: &quot; + e.getMessage());</span>
+<span class="nc" id="L378">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+
+    /**
+     * Request DTO cho tạo user mới
+     */
+<span class="nc" id="L385">    public static class CreateUserRequest {</span>
+        private String email;
+        private String passwordHash;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private User.Gender gender;
+        private java.time.LocalDate dateOfBirth;
+        private String address;
+        private String avatarUrl;
+        private Long roleId;
+
+        // Getters and Setters
+<span class="nc" id="L398">        public String getEmail() { return email; }</span>
+<span class="nc" id="L399">        public void setEmail(String email) { this.email = email; }</span>
+        
+<span class="nc" id="L401">        public String getPasswordHash() { return passwordHash; }</span>
+<span class="nc" id="L402">        public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }</span>
+        
+<span class="nc" id="L404">        public String getFirstName() { return firstName; }</span>
+<span class="nc" id="L405">        public void setFirstName(String firstName) { this.firstName = firstName; }</span>
+        
+<span class="nc" id="L407">        public String getLastName() { return lastName; }</span>
+<span class="nc" id="L408">        public void setLastName(String lastName) { this.lastName = lastName; }</span>
+        
+<span class="nc" id="L410">        public String getPhone() { return phone; }</span>
+<span class="nc" id="L411">        public void setPhone(String phone) { this.phone = phone; }</span>
+        
+<span class="nc" id="L413">        public User.Gender getGender() { return gender; }</span>
+<span class="nc" id="L414">        public void setGender(User.Gender gender) { this.gender = gender; }</span>
+        
+<span class="nc" id="L416">        public java.time.LocalDate getDateOfBirth() { return dateOfBirth; }</span>
+<span class="nc" id="L417">        public void setDateOfBirth(java.time.LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }</span>
+        
+<span class="nc" id="L419">        public String getAddress() { return address; }</span>
+<span class="nc" id="L420">        public void setAddress(String address) { this.address = address; }</span>
+        
+<span class="nc" id="L422">        public String getAvatarUrl() { return avatarUrl; }</span>
+<span class="nc" id="L423">        public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }</span>
+        
+<span class="nc" id="L425">        public Long getRoleId() { return roleId; }</span>
+<span class="nc" id="L426">        public void setRoleId(Long roleId) { this.roleId = roleId; }</span>
+    }
+
+    /**
+     * Request DTO cho cập nhật user
+     */
+    public static class UpdateUserRequest {
+        private String email;
+        private String passwordHash;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private User.Gender gender;
+        private java.time.LocalDate dateOfBirth;
+        private String address;
+        private String avatarUrl;
+        private User.UserStatus status;
+        private Long roleId;
+
+        // Default constructor
+<span class="nc" id="L446">        public UpdateUserRequest() {}</span>
+
+        // Getters and Setters
+<span class="nc" id="L449">        public String getEmail() { return email; }</span>
+<span class="nc" id="L450">        public void setEmail(String email) { this.email = email; }</span>
+        
+<span class="nc" id="L452">        public String getPasswordHash() { return passwordHash; }</span>
+<span class="nc" id="L453">        public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }</span>
+        
+<span class="nc" id="L455">        public String getFirstName() { return firstName; }</span>
+<span class="nc" id="L456">        public void setFirstName(String firstName) { this.firstName = firstName; }</span>
+        
+<span class="nc" id="L458">        public String getLastName() { return lastName; }</span>
+<span class="nc" id="L459">        public void setLastName(String lastName) { this.lastName = lastName; }</span>
+        
+<span class="nc" id="L461">        public String getPhone() { return phone; }</span>
+<span class="nc" id="L462">        public void setPhone(String phone) { this.phone = phone; }</span>
+        
+<span class="nc" id="L464">        public User.Gender getGender() { return gender; }</span>
+<span class="nc" id="L465">        public void setGender(User.Gender gender) { this.gender = gender; }</span>
+        
+<span class="nc" id="L467">        public java.time.LocalDate getDateOfBirth() { return dateOfBirth; }</span>
+<span class="nc" id="L468">        public void setDateOfBirth(java.time.LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }</span>
+        
+<span class="nc" id="L470">        public String getAddress() { return address; }</span>
+<span class="nc" id="L471">        public void setAddress(String address) { this.address = address; }</span>
+        
+<span class="nc" id="L473">        public String getAvatarUrl() { return avatarUrl; }</span>
+<span class="nc" id="L474">        public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }</span>
+        
+<span class="nc" id="L476">        public User.UserStatus getStatus() { return status; }</span>
+<span class="nc" id="L477">        public void setStatus(User.UserStatus status) { this.status = status; }</span>
+        
+<span class="nc" id="L479">        public Long getRoleId() { return roleId; }</span>
+<span class="nc" id="L480">        public void setRoleId(Long roleId) { this.roleId = roleId; }</span>
+    }
+
+    /**
+     * Request DTO cho đổi mật khẩu
+     */
+    public static class ChangePasswordRequest {
+        private String currentPassword;
+        private String newPassword;
+
+        // Default constructor
+<span class="nc" id="L491">        public ChangePasswordRequest() {}</span>
+
+        // Getters and Setters
+<span class="nc" id="L494">        public String getCurrentPassword() { return currentPassword; }</span>
+<span class="nc" id="L495">        public void setCurrentPassword(String currentPassword) { this.currentPassword = currentPassword; }</span>
+        
+<span class="nc" id="L497">        public String getNewPassword() { return newPassword; }</span>
+<span class="nc" id="L498">        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }</span>
+    }
+
+    /**
+     * Request DTO cho cập nhật profile bao gồm Patient information
+     */
+    public static class UpdateProfileRequest {
+        private String email;
+        private String passwordHash;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private User.Gender gender;
+        private java.time.LocalDate dateOfBirth;
+        private String address;
+        private String avatarUrl;
+        private User.UserStatus status;
+        private Long roleId;
+        
+        // Patient information
+        private String healthInsurance;
+        private String medicalHistory;
+
+        // Default constructor
+<span class="nc" id="L522">        public UpdateProfileRequest() {}</span>
+
+        // Getters and Setters
+<span class="nc" id="L525">        public String getEmail() { return email; }</span>
+<span class="nc" id="L526">        public void setEmail(String email) { this.email = email; }</span>
+        
+<span class="nc" id="L528">        public String getPasswordHash() { return passwordHash; }</span>
+<span class="nc" id="L529">        public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }</span>
+        
+<span class="nc" id="L531">        public String getFirstName() { return firstName; }</span>
+<span class="nc" id="L532">        public void setFirstName(String firstName) { this.firstName = firstName; }</span>
+        
+<span class="nc" id="L534">        public String getLastName() { return lastName; }</span>
+<span class="nc" id="L535">        public void setLastName(String lastName) { this.lastName = lastName; }</span>
+        
+<span class="nc" id="L537">        public String getPhone() { return phone; }</span>
+<span class="nc" id="L538">        public void setPhone(String phone) { this.phone = phone; }</span>
+        
+<span class="nc" id="L540">        public User.Gender getGender() { return gender; }</span>
+<span class="nc" id="L541">        public void setGender(User.Gender gender) { this.gender = gender; }</span>
+        
+<span class="nc" id="L543">        public java.time.LocalDate getDateOfBirth() { return dateOfBirth; }</span>
+<span class="nc" id="L544">        public void setDateOfBirth(java.time.LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }</span>
+        
+<span class="nc" id="L546">        public String getAddress() { return address; }</span>
+<span class="nc" id="L547">        public void setAddress(String address) { this.address = address; }</span>
+        
+<span class="nc" id="L549">        public String getAvatarUrl() { return avatarUrl; }</span>
+<span class="nc" id="L550">        public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }</span>
+        
+<span class="nc" id="L552">        public User.UserStatus getStatus() { return status; }</span>
+<span class="nc" id="L553">        public void setStatus(User.UserStatus status) { this.status = status; }</span>
+        
+<span class="nc" id="L555">        public Long getRoleId() { return roleId; }</span>
+<span class="nc" id="L556">        public void setRoleId(Long roleId) { this.roleId = roleId; }</span>
+        
+<span class="nc" id="L558">        public String getHealthInsurance() { return healthInsurance; }</span>
+<span class="nc" id="L559">        public void setHealthInsurance(String healthInsurance) { this.healthInsurance = healthInsurance; }</span>
+        
+<span class="nc" id="L561">        public String getMedicalHistory() { return medicalHistory; }</span>
+<span class="nc" id="L562">        public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

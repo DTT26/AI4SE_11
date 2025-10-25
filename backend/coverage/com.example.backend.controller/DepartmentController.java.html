@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DepartmentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.controller</a> &gt; <span class="el_source">DepartmentController.java</span></div><h1>DepartmentController.java</h1><pre class="source lang-java linenums">package com.example.backend.controller;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.example.backend.constant.AppConstants;
+import com.example.backend.dto.DepartmentDTO;
+import com.example.backend.model.Department;
+import com.example.backend.service.DepartmentService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping(&quot;/api/departments&quot;)
+@RequiredArgsConstructor
+@CrossOrigin(origins = &quot;*&quot;)
+public class DepartmentController {
+
+    private final DepartmentService departmentService;
+
+    @GetMapping
+    public ResponseEntity&lt;Page&lt;DepartmentDTO.Response&gt;&gt; getAllDepartments(
+            @PageableDefault(size = AppConstants.DEFAULT_PAGE_SIZE, sort = &quot;departmentName&quot;) Pageable pageable) {
+<span class="nc" id="L42">        Page&lt;DepartmentDTO.Response&gt; departments = departmentService.getAllDepartments(pageable);</span>
+<span class="nc" id="L43">        return ResponseEntity.ok(departments);</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;DepartmentDTO.Response&gt; getDepartmentById(@PathVariable Long id) {
+<span class="nc" id="L48">        DepartmentDTO.Response department = departmentService.getDepartmentById(id);</span>
+<span class="nc" id="L49">        return ResponseEntity.ok(department);</span>
+    }
+
+    @GetMapping(&quot;/name/{departmentName}&quot;)
+    public ResponseEntity&lt;DepartmentDTO.Response&gt; getDepartmentByName(@PathVariable String departmentName) {
+<span class="nc" id="L54">        DepartmentDTO.Response department = departmentService.getDepartmentByName(departmentName);</span>
+<span class="nc" id="L55">        return ResponseEntity.ok(department);</span>
+    }
+
+    @GetMapping(&quot;/search&quot;)
+    public ResponseEntity&lt;Page&lt;DepartmentDTO.Response&gt;&gt; searchDepartments(
+            @RequestParam(required = false) String departmentName,
+            @RequestParam(required = false) Department.DepartmentStatus status,
+            @PageableDefault(size = AppConstants.DEFAULT_PAGE_SIZE, sort = &quot;departmentName&quot;) Pageable pageable) {
+        
+<span class="nc" id="L64">        Page&lt;DepartmentDTO.Response&gt; departments = departmentService.searchDepartments(departmentName, status, pageable);</span>
+<span class="nc" id="L65">        return ResponseEntity.ok(departments);</span>
+    }
+
+    @PostMapping
+    public ResponseEntity&lt;DepartmentDTO.Response&gt; createDepartment(@Valid @RequestBody DepartmentDTO.Create createDTO) {
+<span class="nc" id="L70">        DepartmentDTO.Response createdDepartment = departmentService.createDepartment(createDTO);</span>
+<span class="nc" id="L71">        return ResponseEntity.status(HttpStatus.CREATED).body(createdDepartment);</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;DepartmentDTO.Response&gt; updateDepartment(
+            @PathVariable Long id,
+            @Valid @RequestBody DepartmentDTO.Update updateDTO) {
+<span class="nc" id="L78">        DepartmentDTO.Response updatedDepartment = departmentService.updateDepartment(id, updateDTO);</span>
+<span class="nc" id="L79">        return ResponseEntity.ok(updatedDepartment);</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Void&gt; deleteDepartment(@PathVariable Long id) {
+<span class="nc" id="L84">        departmentService.deleteDepartment(id);</span>
+<span class="nc" id="L85">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @PutMapping(&quot;/{id}/status&quot;)
+    public ResponseEntity&lt;DepartmentDTO.Response&gt; changeStatus(
+            @PathVariable Long id,
+            @RequestParam Department.DepartmentStatus status) {
+<span class="nc" id="L92">        DepartmentDTO.Response updatedDepartment = departmentService.changeStatus(id, status);</span>
+<span class="nc" id="L93">        return ResponseEntity.ok(updatedDepartment);</span>
+    }
+
+    @GetMapping(&quot;/statistics&quot;)
+    public ResponseEntity&lt;DepartmentDTO.Statistics&gt; getStatistics() {
+<span class="nc" id="L98">        DepartmentDTO.Statistics stats = departmentService.getDepartmentStatistics();</span>
+<span class="nc" id="L99">        return ResponseEntity.ok(stats);</span>
+    }
+
+    @GetMapping(&quot;/active&quot;)
+    public ResponseEntity&lt;Page&lt;DepartmentDTO.Response&gt;&gt; getActiveDepartments(
+            @PageableDefault(size = AppConstants.DEFAULT_PAGE_SIZE, sort = &quot;departmentName&quot;) Pageable pageable) {
+<span class="nc" id="L105">        Page&lt;DepartmentDTO.Response&gt; departments = departmentService.getActiveDepartments(pageable);</span>
+<span class="nc" id="L106">        return ResponseEntity.ok(departments);</span>
+    }
+
+    @PostMapping(&quot;/{id}/upload-image&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; uploadDepartmentImage(
+            @PathVariable Long id,
+            @RequestParam(&quot;file&quot;) MultipartFile file) {
+<span class="nc" id="L113">        System.out.println(&quot;=== DEPARTMENT UPLOAD ENDPOINT CALLED ===&quot;);</span>
+<span class="nc" id="L114">        System.out.println(&quot;Department ID: &quot; + id);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">        System.out.println(&quot;File: &quot; + (file != null ? file.getOriginalFilename() : &quot;null&quot;));</span>
+<span class="nc" id="L116">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+        
+        try {
+            // Validate file
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (file.isEmpty()) {</span>
+<span class="nc" id="L121">                response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L122">                response.put(&quot;message&quot;, &quot;File không được để trống&quot;);</span>
+<span class="nc" id="L123">                return ResponseEntity.badRequest().body(response);</span>
+            }
+
+            // Check file size (5MB limit)
+<span class="nc bnc" id="L127" title="All 2 branches missed.">            if (file.getSize() &gt; 5 * 1024 * 1024) {</span>
+<span class="nc" id="L128">                response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L129">                response.put(&quot;message&quot;, &quot;Kích thước file không được vượt quá 5MB&quot;);</span>
+<span class="nc" id="L130">                return ResponseEntity.badRequest().body(response);</span>
+            }
+
+            // Check file type
+<span class="nc" id="L134">            String contentType = file.getContentType();</span>
+<span class="nc bnc" id="L135" title="All 4 branches missed.">            if (contentType == null || !contentType.startsWith(&quot;image/&quot;)) {</span>
+<span class="nc" id="L136">                response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L137">                response.put(&quot;message&quot;, &quot;File phải là ảnh&quot;);</span>
+<span class="nc" id="L138">                return ResponseEntity.badRequest().body(response);</span>
+            }
+
+            // Upload image and update department
+<span class="nc" id="L142">            String imageUrl = departmentService.uploadDepartmentImage(id, file);</span>
+            
+<span class="nc" id="L144">            response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L145">            response.put(&quot;message&quot;, &quot;Upload ảnh thành công&quot;);</span>
+<span class="nc" id="L146">            response.put(&quot;imageUrl&quot;, imageUrl);</span>
+            
+<span class="nc" id="L148">            return ResponseEntity.ok(response);</span>
+            
+<span class="nc" id="L150">        } catch (Exception e) {</span>
+<span class="nc" id="L151">            System.err.println(&quot;Exception in uploadDepartmentImage endpoint: &quot; + e.getMessage());</span>
+<span class="nc" id="L152">            e.printStackTrace();</span>
+<span class="nc" id="L153">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L154">            response.put(&quot;message&quot;, &quot;Lỗi khi upload ảnh: &quot; + e.getMessage());</span>
+<span class="nc" id="L155">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

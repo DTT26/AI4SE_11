@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmailOtpService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">EmailOtpService.java</span></div><h1>EmailOtpService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailSendException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L22">@Slf4j</span>
+public class EmailOtpService {
+
+    private final JavaMailSender mailSender;
+    
+    @Value(&quot;${spring.mail.username:noreply@clinic.com}&quot;)
+    private String fromEmail;
+
+    // Lưu OTP tạm thời trong memory (email -&gt; otp)
+    private final Map&lt;String, String&gt; otpStorage = new ConcurrentHashMap&lt;&gt;();
+    // Lưu pending patient registration (email -&gt; PatientRegisterRequest)
+    private final Map&lt;String, com.example.backend.service.PatientService.PatientRegisterRequest&gt; pendingRegistrations = new ConcurrentHashMap&lt;&gt;();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    public boolean sendOtp(String email) {
+        try {
+<span class="nc" id="L38">            log.info(&quot;Starting OTP send process for email: {}&quot;, email);</span>
+            
+            // Tạo OTP 6 số
+<span class="nc" id="L41">            String otp = generateOtp();</span>
+<span class="nc" id="L42">            log.info(&quot;Generated OTP: {}&quot;, otp);</span>
+            
+            // Lưu OTP vào memory với thời gian hết hạn 5 phút
+<span class="nc" id="L45">            otpStorage.put(email, otp);</span>
+<span class="nc" id="L46">            scheduleOtpExpiry(email, 5); // 5 phút</span>
+<span class="nc" id="L47">            log.info(&quot;OTP stored in memory for email: {}&quot;, email);</span>
+            
+            // Tạo email content
+<span class="nc" id="L50">            String subject = &quot;Mã xác thực OTP - ClinicBooking&quot;;</span>
+<span class="nc" id="L51">            String content = buildOtpEmailContent(otp);</span>
+            
+            // Kiểm tra mail server configuration
+<span class="nc" id="L54">            boolean mailConfigured = isMailServerConfigured();</span>
+<span class="nc" id="L55">            log.info(&quot;Mail server configured: {}&quot;, mailConfigured);</span>
+<span class="nc" id="L56">            log.info(&quot;From email: {}&quot;, fromEmail);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">            log.info(&quot;Mail sender: {}&quot;, mailSender != null ? &quot;Available&quot; : &quot;Null&quot;);</span>
+            
+            // Gửi email (có thể simulate nếu không có mail server)
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            if (mailConfigured) {</span>
+<span class="nc" id="L61">                log.info(&quot;Attempting to send real email...&quot;);</span>
+<span class="nc" id="L62">                boolean sent = sendEmail(email, subject, content);</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">                if (sent) {</span>
+<span class="nc" id="L64">                    log.info(&quot;OTP sent to email: {}&quot;, email);</span>
+<span class="nc" id="L65">                    return true;</span>
+                } else {
+<span class="nc" id="L67">                    log.error(&quot;Failed to send email, falling back to simulation&quot;);</span>
+<span class="nc" id="L68">                    simulateEmail(email, subject, otp);</span>
+<span class="nc" id="L69">                    return true;</span>
+                }
+            } else {
+                // Simulate gửi email - hiển thị OTP trong log để test
+<span class="nc" id="L73">                simulateEmail(email, subject, otp);</span>
+<span class="nc" id="L74">                return true;</span>
+            }
+            
+<span class="nc" id="L77">        } catch (Exception e) {</span>
+<span class="nc" id="L78">            log.error(&quot;Failed to send OTP to email: {}&quot;, email, e);</span>
+<span class="nc" id="L79">            return false;</span>
+        }
+    }
+
+    // Save a pending registration (will send OTP)
+    public void savePendingRegistration(com.example.backend.service.PatientService.PatientRegisterRequest req) {
+<span class="nc bnc" id="L85" title="All 4 branches missed.">        if (req == null || req.getEmail() == null) return;</span>
+<span class="nc" id="L86">        pendingRegistrations.put(req.getEmail(), req);</span>
+        // send OTP to email (simulate or real depending on config)
+<span class="nc" id="L88">        sendOtp(req.getEmail());</span>
+<span class="nc" id="L89">    }</span>
+
+    // Consume (remove and return) pending registration
+    public com.example.backend.service.PatientService.PatientRegisterRequest consumePendingRegistration(String email) {
+<span class="nc" id="L93">        return pendingRegistrations.remove(email);</span>
+    }
+
+    // Check if there is a pending registration for email
+    public boolean hasPendingRegistration(String email) {
+<span class="nc" id="L98">        return pendingRegistrations.containsKey(email);</span>
+    }
+
+    public boolean verifyOtp(String email, String inputOtp) {
+<span class="nc" id="L102">        String savedOtp = otpStorage.get(email);</span>
+        
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (savedOtp == null) {</span>
+<span class="nc" id="L105">            log.warn(&quot;No OTP found for email: {}&quot;, email);</span>
+<span class="nc" id="L106">            return false;</span>
+        }
+        
+<span class="nc" id="L109">        boolean isValid = savedOtp.equals(inputOtp);</span>
+        
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        if (isValid) {</span>
+<span class="nc" id="L112">            log.info(&quot;OTP verified successfully for email: {}&quot;, email);</span>
+        } else {
+<span class="nc" id="L114">            log.warn(&quot;Invalid OTP for email: {}&quot;, email);</span>
+        }
+        
+<span class="nc" id="L117">        return isValid;</span>
+    }
+
+    /**
+     * Xóa OTP sau khi sử dụng thành công (cho reset password)
+     */
+    public void consumeOtp(String email) {
+<span class="nc" id="L124">        otpStorage.remove(email);</span>
+<span class="nc" id="L125">        log.info(&quot;OTP consumed and removed for email: {}&quot;, email);</span>
+<span class="nc" id="L126">    }</span>
+
+    private String generateOtp() {
+<span class="nc" id="L129">        Random random = new Random();</span>
+<span class="nc" id="L130">        int otp = 100000 + random.nextInt(900000); // 6 digit OTP</span>
+<span class="nc" id="L131">        return String.valueOf(otp);</span>
+    }
+
+    private void scheduleOtpExpiry(String email, int minutes) {
+<span class="nc" id="L135">        scheduler.schedule(() -&gt; {</span>
+<span class="nc" id="L136">            otpStorage.remove(email);</span>
+<span class="nc" id="L137">            log.info(&quot;OTP expired and removed for email: {}&quot;, email);</span>
+<span class="nc" id="L138">        }, minutes, TimeUnit.MINUTES);</span>
+<span class="nc" id="L139">    }</span>
+
+    private String buildOtpEmailContent(String otp) {
+<span class="nc" id="L142">        return &quot;Chào bạn,\n\n&quot;</span>
+             + &quot;Mã xác thực OTP của bạn là: &quot; + otp + &quot;\n&quot;
+             + &quot;Mã này có hiệu lực trong 5 phút.\n\n&quot;
+             + &quot;Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.\n\n&quot;
+             + &quot;Trân trọng,\n&quot;
+             + &quot;Đội ngũ ClinicBooking&quot;;
+    }
+
+    private boolean isMailServerConfigured() {
+        try {
+            // Kiểm tra có JavaMailSender và email config
+<span class="nc bnc" id="L153" title="All 2 branches missed.">            if (mailSender == null) {</span>
+<span class="nc" id="L154">                log.debug(&quot;JavaMailSender is null&quot;);</span>
+<span class="nc" id="L155">                return false;</span>
+            }
+            
+            // Kiểm tra email configuration
+<span class="nc" id="L159">            log.debug(&quot;Checking mail configuration - Username: {}&quot;, fromEmail);</span>
+            
+            // Enable real email mode nếu có config thật
+<span class="nc bnc" id="L162" title="All 2 branches missed.">            boolean configured = fromEmail != null &amp;&amp; </span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">                   !fromEmail.isEmpty() &amp;&amp; </span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">                   fromEmail.contains(&quot;@&quot;) &amp;&amp;</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">                   !fromEmail.equals(&quot;noreply@clinic.com&quot;);</span>
+                   
+<span class="nc" id="L167">            log.info(&quot;Mail configuration check result: {}&quot;, configured);</span>
+<span class="nc" id="L168">            return configured;</span>
+                   
+<span class="nc" id="L170">        } catch (Exception e) {</span>
+<span class="nc" id="L171">            log.error(&quot;Error checking mail server configuration&quot;, e);</span>
+<span class="nc" id="L172">            return false;</span>
+        }
+    }
+
+    private boolean sendEmail(String to, String subject, String body) {
+        try {
+<span class="nc" id="L178">            log.info(&quot;Attempting to send real email to: {}&quot;, to);</span>
+            
+            // Sử dụng SimpleMailMessage thay vì MimeMessage để đơn giản hóa
+<span class="nc" id="L181">            SimpleMailMessage message = new SimpleMailMessage();</span>
+<span class="nc" id="L182">            message.setFrom(fromEmail);</span>
+<span class="nc" id="L183">            message.setTo(to);</span>
+<span class="nc" id="L184">            message.setSubject(subject);</span>
+<span class="nc" id="L185">            message.setText(body);</span>
+            
+<span class="nc" id="L187">            mailSender.send(message);</span>
+<span class="nc" id="L188">            log.info(&quot;Email sent successfully to: {}&quot;, to);</span>
+<span class="nc" id="L189">            return true;</span>
+            
+<span class="nc" id="L191">        } catch (MailAuthenticationException e) {</span>
+<span class="nc" id="L192">            log.error(&quot;Authentication failed when sending email. Check username/password: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L193">            return false;</span>
+<span class="nc" id="L194">        } catch (MailSendException e) {</span>
+<span class="nc" id="L195">            log.error(&quot;Failed to send email to {}: {}&quot;, to, e.getMessage());</span>
+<span class="nc" id="L196">            return false;</span>
+<span class="nc" id="L197">        } catch (Exception e) {</span>
+<span class="nc" id="L198">            log.error(&quot;Unexpected error when sending email to {}: {}&quot;, to, e.getMessage());</span>
+<span class="nc" id="L199">            return false;</span>
+        }
+    }
+
+    private void simulateEmail(String email, String subject, String otp) {
+<span class="nc" id="L204">        log.info(&quot;=== SIMULATED EMAIL ===&quot;);</span>
+<span class="nc" id="L205">        log.info(&quot;To: {}&quot;, email);</span>
+<span class="nc" id="L206">        log.info(&quot;Subject: {}&quot;, subject);</span>
+<span class="nc" id="L207">        log.info(&quot;OTP: {}&quot;, otp);</span>
+<span class="nc" id="L208">        log.info(&quot;======================&quot;);</span>
+<span class="nc" id="L209">    }</span>
+
+    // Method để clear OTP manually nếu cần
+    public void clearOtp(String email) {
+<span class="nc" id="L213">        otpStorage.remove(email);</span>
+<span class="nc" id="L214">        log.info(&quot;OTP cleared manually for email: {}&quot;, email);</span>
+<span class="nc" id="L215">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

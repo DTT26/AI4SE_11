@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReviewMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.mapper</a> &gt; <span class="el_source">ReviewMapper.java</span></div><h1>ReviewMapper.java</h1><pre class="source lang-java linenums">package com.example.backend.mapper;
+
+import org.springframework.stereotype.Component;
+
+import com.example.backend.dto.ReviewDTO;
+import com.example.backend.model.Review;
+import com.example.backend.model.Doctor;
+import com.example.backend.model.Patient;
+
+@Component
+<span class="nc" id="L11">public class ReviewMapper {</span>
+
+    public Review createDTOToEntity(ReviewDTO.Create dto, Patient patient, Doctor doctor) {
+<span class="nc" id="L14">        Review entity = new Review();</span>
+<span class="nc" id="L15">        entity.setPatient(patient);</span>
+<span class="nc" id="L16">        entity.setDoctor(doctor);</span>
+<span class="nc" id="L17">        entity.setRating(dto.getRating());</span>
+<span class="nc" id="L18">        entity.setComment(dto.getComment());</span>
+<span class="nc" id="L19">        entity.setCreatedAt(java.time.LocalDateTime.now());</span>
+<span class="nc" id="L20">        entity.setStatus(&quot;ACTIVE&quot;);</span>
+<span class="nc" id="L21">        return entity;</span>
+    }
+
+    public void applyUpdateToEntity(Review entity, ReviewDTO.Update dto) {
+<span class="nc bnc" id="L25" title="All 2 branches missed.">        if (dto.getRating() != null) {</span>
+<span class="nc" id="L26">            entity.setRating(dto.getRating());</span>
+        }
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        if (dto.getComment() != null) {</span>
+<span class="nc" id="L29">            entity.setComment(dto.getComment());</span>
+        }
+<span class="nc bnc" id="L31" title="All 2 branches missed.">        if (dto.getStatus() != null) {</span>
+<span class="nc" id="L32">            entity.setStatus(dto.getStatus());</span>
+        }
+<span class="nc" id="L34">    }</span>
+
+    public ReviewDTO.Response entityToResponseDTO(Review entity) {
+<span class="nc" id="L37">        ReviewDTO.Response dto = new ReviewDTO.Response();</span>
+<span class="nc" id="L38">        dto.setReviewId(entity.getReviewId());</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">        dto.setPatientId(entity.getPatient() != null ? entity.getPatient().getPatientId() : null);</span>
+<span class="nc bnc" id="L40" title="All 4 branches missed.">        dto.setPatientName(entity.getPatient() != null &amp;&amp; entity.getPatient().getUser() != null</span>
+<span class="nc" id="L41">                ? entity.getPatient().getUser().getFirstName() + &quot; &quot; + entity.getPatient().getUser().getLastName()</span>
+<span class="nc" id="L42">                : null);</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        dto.setDoctorId(entity.getDoctor() != null ? entity.getDoctor().getDoctorId() : null);</span>
+<span class="nc bnc" id="L44" title="All 4 branches missed.">        dto.setDoctorName(entity.getDoctor() != null &amp;&amp; entity.getDoctor().getUser() != null</span>
+<span class="nc" id="L45">                ? entity.getDoctor().getUser().getFirstName() + &quot; &quot; + entity.getDoctor().getUser().getLastName()</span>
+<span class="nc" id="L46">                : null);</span>
+<span class="nc" id="L47">        dto.setRating(entity.getRating());</span>
+<span class="nc" id="L48">        dto.setComment(entity.getComment());</span>
+<span class="nc" id="L49">        dto.setCreatedAt(entity.getCreatedAt());</span>
+<span class="nc" id="L50">        dto.setStatus(entity.getStatus());</span>
+<span class="nc" id="L51">        return dto;</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

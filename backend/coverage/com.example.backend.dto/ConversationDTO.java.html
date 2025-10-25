@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConversationDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.dto</a> &gt; <span class="el_source">ConversationDTO.java</span></div><h1>ConversationDTO.java</h1><pre class="source lang-java linenums">package com.example.backend.dto;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+<span class="nc" id="L10">public class ConversationDTO {</span>
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Create {
+        private Long patientUserId;
+        private Long patientId;
+        private Long doctorUserId;
+        private Long doctorId;
+    }
+
+    @Data
+    @NoArgsConstructor
+    public static class Update {
+        // No updatable fields for conversations currently
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Response {
+        private Long conversationId;
+        private Long patientUserId;
+        private Long patientId;
+        private String patientName;
+        private Long doctorUserId;
+        private Long doctorId;
+        private String doctorName;
+        private LocalDateTime createdAt;
+        private List&lt;MessageDTO.Response&gt; messages;
+        private Long messageCount;
+        private LocalDateTime lastMessageTime;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

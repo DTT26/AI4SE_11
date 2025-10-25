@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DoctorScheduleService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">DoctorScheduleService.java</span></div><h1>DoctorScheduleService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.time.LocalTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.dto.DoctorScheduleDTO;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.DoctorScheduleMapper;
+import com.example.backend.model.Doctor;
+import com.example.backend.model.DoctorSchedule;
+import com.example.backend.model.Appointment;
+import com.example.backend.repository.DoctorRepository;
+import com.example.backend.repository.DoctorScheduleRepository;
+import com.example.backend.repository.AppointmentRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class DoctorScheduleService {
+
+    private final DoctorScheduleRepository doctorScheduleRepository;
+    private final DoctorRepository doctorRepository;
+    private final DoctorScheduleMapper doctorScheduleMapper;
+    private final AppointmentRepository appointmentRepository;
+
+    public DoctorScheduleDTO.Response create(DoctorScheduleDTO.Create dto) {
+<span class="nc" id="L32">        Doctor doctor = findDoctor(dto.getDoctorId());</span>
+<span class="nc" id="L33">        validateTimeRange(dto.getStartTime(), dto.getEndTime());</span>
+<span class="nc" id="L34">        validateNoOverlap(dto.getDoctorId(), dto.getWorkDate(), dto.getStartTime(), dto.getEndTime());</span>
+
+<span class="nc" id="L36">        DoctorSchedule entity = doctorScheduleMapper.createDTOToEntity(dto, doctor);</span>
+<span class="nc" id="L37">        DoctorSchedule saved = doctorScheduleRepository.save(entity);</span>
+<span class="nc" id="L38">        return doctorScheduleMapper.entityToResponseDTO(saved);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public DoctorScheduleDTO.Response getById(Long scheduleId) {
+<span class="nc" id="L43">        DoctorSchedule entity = findSchedule(scheduleId);</span>
+<span class="nc" id="L44">        return doctorScheduleMapper.entityToResponseDTO(entity);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;DoctorScheduleDTO.Response&gt; getByDoctor(Long doctorId, String status) {
+<span class="nc bnc" id="L49" title="All 4 branches missed.">        List&lt;DoctorSchedule&gt; list = (status == null || status.isBlank())</span>
+<span class="nc" id="L50">                ? doctorScheduleRepository.findByDoctor_DoctorId(doctorId)</span>
+<span class="nc" id="L51">                : doctorScheduleRepository.findByDoctor_DoctorIdAndStatus(doctorId, status);</span>
+<span class="nc" id="L52">        return list.stream().map(doctorScheduleMapper::entityToResponseDTO).toList();</span>
+    }
+
+    public DoctorScheduleDTO.Response update(Long scheduleId, DoctorScheduleDTO.Update dto) {
+<span class="nc" id="L56">        DoctorSchedule entity = findSchedule(scheduleId);</span>
+
+<span class="nc bnc" id="L58" title="All 6 branches missed.">        if (dto.getStartTime() != null || dto.getEndTime() != null || dto.getWorkDate() != null) {</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">            LocalTime newStart = dto.getStartTime() != null ? dto.getStartTime() : entity.getStartTime();</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            LocalTime newEnd = dto.getEndTime() != null ? dto.getEndTime() : entity.getEndTime();</span>
+<span class="nc" id="L61">            validateTimeRange(newStart, newEnd);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">            java.time.LocalDate newDate = dto.getWorkDate() != null ? dto.getWorkDate() : entity.getWorkDate();</span>
+<span class="nc" id="L63">            validateNoOverlap(entity.getDoctor().getDoctorId(), newDate, newStart, newEnd, entity.getScheduleId());</span>
+        }
+
+<span class="nc" id="L66">        doctorScheduleMapper.applyUpdateToEntity(entity, dto);</span>
+<span class="nc" id="L67">        DoctorSchedule saved = doctorScheduleRepository.save(entity);</span>
+        
+<span class="nc" id="L69">        return doctorScheduleMapper.entityToResponseDTO(saved);</span>
+    }
+
+    public List&lt;Appointment&gt; getScheduleAppointments(Long scheduleId) {
+<span class="nc" id="L73">        return appointmentRepository.findBySchedule_ScheduleId(scheduleId);</span>
+    }
+
+
+    public void delete(Long scheduleId) {
+<span class="nc" id="L78">        DoctorSchedule entity = findSchedule(scheduleId);</span>
+        
+        // Xóa schedule
+<span class="nc" id="L81">        doctorScheduleRepository.delete(entity);</span>
+<span class="nc" id="L82">        System.out.println(&quot;Schedule &quot; + scheduleId + &quot; deleted successfully&quot;);</span>
+<span class="nc" id="L83">    }</span>
+
+    // Helpers
+    private Doctor findDoctor(Long doctorId) {
+<span class="nc" id="L87">        return doctorRepository.findById(doctorId)</span>
+<span class="nc" id="L88">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với ID: &quot; + doctorId));</span>
+    }
+
+    private DoctorSchedule findSchedule(Long scheduleId) {
+<span class="nc" id="L92">        return doctorScheduleRepository.findById(scheduleId)</span>
+<span class="nc" id="L93">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy lịch với ID: &quot; + scheduleId));</span>
+    }
+
+    private void validateTimeRange(LocalTime start, LocalTime end) {
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if (!end.isAfter(start)) {</span>
+<span class="nc" id="L98">            throw new IllegalArgumentException(&quot;Thời gian kết thúc phải sau thời gian bắt đầu&quot;);</span>
+        }
+<span class="nc" id="L100">    }</span>
+
+    private void validateNoOverlap(Long doctorId, java.time.LocalDate date, LocalTime start, LocalTime end) {
+<span class="nc" id="L103">        List&lt;DoctorSchedule&gt; sameDay = doctorScheduleRepository.findByDoctor_DoctorIdAndWorkDate(doctorId, date);</span>
+<span class="nc" id="L104">        boolean overlaps = sameDay.stream()</span>
+<span class="nc bnc" id="L105" title="All 4 branches missed.">                .anyMatch(ds -&gt; start.isBefore(ds.getEndTime()) &amp;&amp; end.isAfter(ds.getStartTime()));</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (overlaps) {</span>
+<span class="nc" id="L107">            throw new IllegalArgumentException(&quot;Khoảng thời gian bị trùng với lịch khác&quot;);</span>
+        }
+<span class="nc" id="L109">    }</span>
+
+    private void validateNoOverlap(Long doctorId, java.time.LocalDate date, LocalTime start, LocalTime end, Long excludeScheduleId) {
+<span class="nc" id="L112">        List&lt;DoctorSchedule&gt; sameDay = doctorScheduleRepository.findByDoctor_DoctorIdAndWorkDate(doctorId, date);</span>
+<span class="nc" id="L113">        boolean overlaps = sameDay.stream()</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">                .filter(ds -&gt; !ds.getScheduleId().equals(excludeScheduleId))</span>
+<span class="nc bnc" id="L115" title="All 4 branches missed.">                .anyMatch(ds -&gt; start.isBefore(ds.getEndTime()) &amp;&amp; end.isAfter(ds.getStartTime()));</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">        if (overlaps) {</span>
+<span class="nc" id="L117">            throw new IllegalArgumentException(&quot;Khoảng thời gian bị trùng với lịch khác&quot;);</span>
+        }
+<span class="nc" id="L119">    }</span>
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

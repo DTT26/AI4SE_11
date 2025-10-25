@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.dto</a> &gt; <span class="el_source">PaymentDTO.java</span></div><h1>PaymentDTO.java</h1><pre class="source lang-java linenums">package com.example.backend.dto;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import com.example.backend.model.Payment;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+<span class="nc" id="L11">public class PaymentDTO {</span>
+    
+    // ========== PaymentCreateDTO ==========
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Create {
+        @NotNull(message = &quot;Appointment ID không được để trống&quot;)
+        private Long appointmentId;
+        
+        // Amount không bắt buộc, sẽ lấy từ appointment.fee
+        private BigDecimal amount;
+        
+        private String description;
+        
+        @NotNull(message = &quot;Return URL không được để trống&quot;)
+        private String returnUrl;
+        
+        @NotNull(message = &quot;Cancel URL không được để trống&quot;)
+        private String cancelUrl;
+    }
+    
+    // ========== PaymentResponseDTO ==========
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Response {
+        private Long paymentId;
+        private Long appointmentId;
+        private String payOSPaymentId;
+        private BigDecimal amount;
+        private String currency;
+        private Payment.PaymentStatus status;
+        private String paymentMethod;
+        private String payOSCode;
+        private String payOSLink;
+        private String description;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private LocalDateTime paidAt;
+        private String failureReason;
+        
+        // Patient info for display
+        private String patientName;
+        private String doctorName;
+        private String appointmentDate;
+    }
+    
+    // ========== PaymentUpdateDTO ==========
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Update {
+        private BigDecimal amount;
+        private String description;
+        private Payment.PaymentStatus status;
+        private String paymentMethod;
+        private String failureReason;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

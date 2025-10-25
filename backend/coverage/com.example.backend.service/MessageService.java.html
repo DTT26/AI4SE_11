@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MessageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">MessageService.java</span></div><h1>MessageService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.dto.MessageDTO;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.MessageMapper;
+import com.example.backend.model.Conversation;
+import com.example.backend.model.Message;
+import com.example.backend.model.User;
+import com.example.backend.repository.ConversationRepository;
+import com.example.backend.repository.MessageRepository;
+import com.example.backend.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+<span class="nc" id="L28">@Slf4j</span>
+public class MessageService {
+
+    private final MessageRepository messageRepository;
+    private final ConversationRepository conversationRepository;
+    private final UserRepository userRepository;
+    private final MessageMapper messageMapper;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public MessageDTO.Response createMessage(MessageDTO.Create dto) {
+        // Validate conversation exists
+<span class="nc" id="L39">        Conversation conversation = conversationRepository.findById(dto.getConversationId())</span>
+<span class="nc" id="L40">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy cuộc trò chuyện với ID: &quot; + dto.getConversationId()));</span>
+        
+        // Validate sender exists
+<span class="nc" id="L43">        User sender = userRepository.findById(dto.getSenderId())</span>
+<span class="nc" id="L44">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy người gửi với ID: &quot; + dto.getSenderId()));</span>
+
+        // Create message
+<span class="nc" id="L47">        Message message = messageMapper.createDTOToEntity(dto, sender);</span>
+<span class="nc" id="L48">        message.setConversation(conversation);</span>
+<span class="nc" id="L49">        Message savedMessage = messageRepository.save(message);</span>
+<span class="nc" id="L50">        MessageDTO.Response response = messageMapper.entityToResponseDTO(savedMessage);</span>
+<span class="nc" id="L51">        broadcastMessage(response);</span>
+<span class="nc" id="L52">        return response;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public MessageDTO.Response getMessageById(Long messageId) {
+<span class="nc" id="L57">        Message message = messageRepository.findById(messageId)</span>
+<span class="nc" id="L58">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy tin nhắn với ID: &quot; + messageId));</span>
+        
+<span class="nc" id="L60">        return messageMapper.entityToResponseDTO(message);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getMessagesByConversation(Long conversationId) {
+<span class="nc" id="L65">        List&lt;Message&gt; messages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId);</span>
+<span class="nc" id="L66">        return messages.stream()</span>
+<span class="nc" id="L67">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L68">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;MessageDTO.Response&gt; getMessagesByConversationPaginated(Long conversationId, Pageable pageable) {
+<span class="nc" id="L73">        Page&lt;Message&gt; messages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId, pageable);</span>
+<span class="nc" id="L74">        return messages.map(messageMapper::entityToResponseDTO);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getMessagesBySender(Long senderId) {
+<span class="nc" id="L79">        List&lt;Message&gt; messages = messageRepository.findBySenderIdOrderBySentAtDesc(senderId);</span>
+<span class="nc" id="L80">        return messages.stream()</span>
+<span class="nc" id="L81">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L82">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getNewMessages(Long conversationId, LocalDateTime since) {
+<span class="nc" id="L87">        List&lt;Message&gt; messages = messageRepository.findByConversationIdAndSentAtAfter(conversationId, since);</span>
+<span class="nc" id="L88">        return messages.stream()</span>
+<span class="nc" id="L89">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L90">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; searchMessagesInConversation(Long conversationId, String keyword) {
+<span class="nc" id="L95">        List&lt;Message&gt; messages = messageRepository.findByConversationIdAndContentContaining(conversationId, keyword);</span>
+<span class="nc" id="L96">        return messages.stream()</span>
+<span class="nc" id="L97">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L98">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getMessagesInTimeRange(Long conversationId, LocalDateTime start, LocalDateTime end) {
+<span class="nc" id="L103">        List&lt;Message&gt; messages = messageRepository.findByConversationIdAndSentAtBetween(conversationId, start, end);</span>
+<span class="nc" id="L104">        return messages.stream()</span>
+<span class="nc" id="L105">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L106">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getMessagesWithAttachments(Long conversationId) {
+<span class="nc" id="L111">        List&lt;Message&gt; messages = messageRepository.findMessagesWithAttachmentsByConversationId(conversationId);</span>
+<span class="nc" id="L112">        return messages.stream()</span>
+<span class="nc" id="L113">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L114">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Long getMessageCountByConversation(Long conversationId) {
+<span class="nc" id="L119">        return messageRepository.countByConversationId(conversationId);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Long getMessageCountBySender(Long senderId) {
+<span class="nc" id="L124">        return messageRepository.countBySenderId(senderId);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public MessageDTO.Response getLatestMessageByConversation(Long conversationId) {
+<span class="nc" id="L129">        List&lt;Message&gt; messages = messageRepository.findLatestMessageByConversationId(conversationId);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (messages.isEmpty()) {</span>
+<span class="nc" id="L131">            throw new NotFoundException(&quot;Không tìm thấy tin nhắn nào trong cuộc trò chuyện với ID: &quot; + conversationId);</span>
+        }
+<span class="nc" id="L133">        return messageMapper.entityToResponseDTO(messages.get(0));</span>
+    }
+
+    public MessageDTO.Response updateMessage(Long messageId, MessageDTO.Update dto) {
+<span class="nc" id="L137">        Message message = messageRepository.findById(messageId)</span>
+<span class="nc" id="L138">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy tin nhắn với ID: &quot; + messageId));</span>
+        
+<span class="nc" id="L140">        messageMapper.applyUpdateToEntity(message, dto);</span>
+<span class="nc" id="L141">        Message savedMessage = messageRepository.save(message);</span>
+<span class="nc" id="L142">        MessageDTO.Response response = messageMapper.entityToResponseDTO(savedMessage);</span>
+<span class="nc" id="L143">        broadcastMessage(response);</span>
+<span class="nc" id="L144">        return response;</span>
+    }
+
+    public void deleteMessage(Long messageId) {
+<span class="nc" id="L148">        Message message = messageRepository.findById(messageId)</span>
+<span class="nc" id="L149">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy tin nhắn với ID: &quot; + messageId));</span>
+        
+<span class="nc" id="L151">        messageRepository.delete(message);</span>
+<span class="nc" id="L152">    }</span>
+
+    public void deleteMessagesByConversation(Long conversationId) {
+<span class="nc" id="L155">        List&lt;Message&gt; messages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId);</span>
+<span class="nc" id="L156">        messageRepository.deleteAll(messages);</span>
+<span class="nc" id="L157">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getRecentMessages(Long conversationId, int limit) {
+<span class="nc" id="L161">        List&lt;Message&gt; messages = messageRepository.findByConversationIdOrderBySentAtDesc(conversationId);</span>
+<span class="nc" id="L162">        return messages.stream()</span>
+<span class="nc" id="L163">                .limit(limit)</span>
+<span class="nc" id="L164">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L165">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Long getUnreadMessageCount(Long conversationId, Long userId) {
+<span class="nc" id="L170">        return messageRepository.countUnreadMessagesByConversationAndUser(conversationId, userId);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;MessageDTO.Response&gt; getUnreadMessages(Long conversationId, Long userId) {
+<span class="nc" id="L175">        List&lt;Message&gt; messages = messageRepository.findUnreadMessagesByConversationAndUser(conversationId, userId);</span>
+<span class="nc" id="L176">        return messages.stream()</span>
+<span class="nc" id="L177">                .map(messageMapper::entityToResponseDTO)</span>
+<span class="nc" id="L178">                .toList();</span>
+    }
+
+    @Transactional
+    public void markMessagesAsRead(Long conversationId, Long userId) {
+<span class="nc" id="L183">        messageRepository.markMessagesAsReadByConversationAndUser(conversationId, userId);</span>
+<span class="nc" id="L184">    }</span>
+
+    @Transactional
+    public void markMessageAsRead(Long messageId) {
+<span class="nc" id="L188">        messageRepository.markMessageAsRead(messageId);</span>
+<span class="nc" id="L189">    }</span>
+
+    private void broadcastMessage(MessageDTO.Response message) {
+<span class="nc bnc" id="L192" title="All 4 branches missed.">        if (message == null || message.getConversationId() == null) {</span>
+<span class="nc" id="L193">            return;</span>
+        }
+        try {
+<span class="nc" id="L196">            messagingTemplate.convertAndSend(</span>
+<span class="nc" id="L197">                    &quot;/topic/conversations/&quot; + message.getConversationId(),</span>
+                    message
+            );
+<span class="nc" id="L200">        } catch (Exception ex) {</span>
+<span class="nc" id="L201">            log.warn(&quot;Failed to publish message {} to WebSocket: {}&quot;, message.getMessageId(), ex.getMessage());</span>
+<span class="nc" id="L202">        }</span>
+<span class="nc" id="L203">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

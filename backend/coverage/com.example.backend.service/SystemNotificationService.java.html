@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SystemNotificationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">SystemNotificationService.java</span></div><h1>SystemNotificationService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.dto.SystemNotificationDTO;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.SystemNotificationMapper;
+import com.example.backend.model.Appointment;
+import com.example.backend.model.SystemNotification;
+import com.example.backend.repository.AppointmentRepository;
+import com.example.backend.repository.SystemNotificationRepository;
+
+import lombok.RequiredArgsConstructor;
+
+/**
+ * Service class cho SystemNotification entity
+ * Chứa business logic để xử lý các thao tác CRUD với SystemNotification
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class SystemNotificationService {
+
+    private final SystemNotificationRepository systemNotificationRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final SystemNotificationMapper systemNotificationMapper;
+
+    /**
+     * Tạo notification mới
+     */
+    public SystemNotificationDTO.Response createNotification(SystemNotificationDTO.Create dto) {
+<span class="nc" id="L38">        Appointment appointment = null;</span>
+        
+        // Lấy appointment nếu có appointmentId
+<span class="nc bnc" id="L41" title="All 2 branches missed.">        if (dto.getAppointmentId() != null) {</span>
+<span class="nc" id="L42">            appointment = appointmentRepository.findById(dto.getAppointmentId())</span>
+<span class="nc" id="L43">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy appointment với ID: &quot; + dto.getAppointmentId()));</span>
+        }
+        
+        // Tạo notification
+<span class="nc" id="L47">        SystemNotification notification = systemNotificationMapper.createDTOToEntity(dto, appointment);</span>
+<span class="nc" id="L48">        SystemNotification saved = systemNotificationRepository.save(notification);</span>
+        
+<span class="nc" id="L50">        return systemNotificationMapper.entityToResponseDTO(saved);</span>
+    }
+
+    /**
+     * Lấy notification theo ID
+     */
+    @Transactional(readOnly = true)
+    public SystemNotificationDTO.Response getNotificationById(Long notificationId) {
+<span class="nc" id="L58">        SystemNotification notification = systemNotificationRepository.findById(notificationId)</span>
+<span class="nc" id="L59">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy notification với ID: &quot; + notificationId));</span>
+        
+<span class="nc" id="L61">        return systemNotificationMapper.entityToResponseDTO(notification);</span>
+    }
+
+    /**
+     * Lấy tất cả notifications
+     */
+    @Transactional(readOnly = true)
+    public List&lt;SystemNotificationDTO.Response&gt; getAllNotifications() {
+<span class="nc" id="L69">        List&lt;SystemNotification&gt; notifications = systemNotificationRepository.findAllWithAppointmentAndPatient();</span>
+<span class="nc" id="L70">        return systemNotificationMapper.entitiesToResponseDTOs(notifications);</span>
+    }
+
+    /**
+     * Lấy notifications với pagination
+     */
+    @Transactional(readOnly = true)
+    public SystemNotificationDTO.ListResponse getNotificationsPaginated(Pageable pageable) {
+<span class="nc" id="L78">        Page&lt;SystemNotification&gt; notificationsPage = systemNotificationRepository.findLatestNotifications(pageable);</span>
+        
+<span class="nc" id="L80">        List&lt;SystemNotificationDTO.Response&gt; notifications = </span>
+<span class="nc" id="L81">                systemNotificationMapper.entitiesToResponseDTOs(notificationsPage.getContent());</span>
+        
+<span class="nc" id="L83">        return systemNotificationMapper.createListResponse(</span>
+                notifications,
+<span class="nc" id="L85">                notificationsPage.getTotalElements(),</span>
+<span class="nc" id="L86">                notificationsPage.getTotalPages(),</span>
+<span class="nc" id="L87">                notificationsPage.getNumber(),</span>
+<span class="nc" id="L88">                notificationsPage.getSize()</span>
+        );
+    }
+
+    /**
+     * Lấy notifications theo appointment
+     */
+    @Transactional(readOnly = true)
+    public List&lt;SystemNotificationDTO.Response&gt; getNotificationsByAppointment(Long appointmentId) {
+<span class="nc" id="L97">        List&lt;SystemNotification&gt; notifications = systemNotificationRepository.findByAppointmentId(appointmentId);</span>
+<span class="nc" id="L98">        return systemNotificationMapper.entitiesToResponseDTOs(notifications);</span>
+    }
+
+    /**
+     * Lấy notifications hệ thống (không liên quan appointment)
+     */
+    @Transactional(readOnly = true)
+    public List&lt;SystemNotificationDTO.Response&gt; getSystemNotifications() {
+<span class="nc" id="L106">        List&lt;SystemNotification&gt; notifications = systemNotificationRepository.findSystemNotifications();</span>
+<span class="nc" id="L107">        return systemNotificationMapper.entitiesToResponseDTOs(notifications);</span>
+    }
+
+    /**
+     * Tìm kiếm notifications
+     */
+    @Transactional(readOnly = true)
+    public List&lt;SystemNotificationDTO.Response&gt; searchNotifications(SystemNotificationDTO.SearchRequest searchRequest) {
+        List&lt;SystemNotification&gt; notifications;
+        
+<span class="nc bnc" id="L117" title="All 4 branches missed.">        if (searchRequest.getKeyword() != null &amp;&amp; !searchRequest.getKeyword().trim().isEmpty()) {</span>
+            // Tìm kiếm theo keyword
+<span class="nc" id="L119">            notifications = systemNotificationRepository.findByTitleOrMessageContaining(searchRequest.getKeyword().trim());</span>
+<span class="nc bnc" id="L120" title="All 4 branches missed.">        } else if (searchRequest.getStartDate() != null &amp;&amp; searchRequest.getEndDate() != null) {</span>
+            // Tìm kiếm theo thời gian
+<span class="nc" id="L122">            notifications = systemNotificationRepository.findByCreatedAtBetween(</span>
+<span class="nc" id="L123">                    searchRequest.getStartDate(), searchRequest.getEndDate());</span>
+<span class="nc bnc" id="L124" title="All 4 branches missed.">        } else if (searchRequest.getSystemOnly() != null &amp;&amp; searchRequest.getSystemOnly()) {</span>
+            // Chỉ notifications hệ thống
+<span class="nc" id="L126">            notifications = systemNotificationRepository.findSystemNotifications();</span>
+        } else {
+            // Lấy tất cả
+<span class="nc" id="L129">            notifications = systemNotificationRepository.findAllWithAppointmentAndPatient();</span>
+        }
+        
+<span class="nc" id="L132">        return systemNotificationMapper.entitiesToResponseDTOs(notifications);</span>
+    }
+
+    /**
+     * Cập nhật notification
+     */
+    public SystemNotificationDTO.Response updateNotification(Long notificationId, SystemNotificationDTO.Update dto) {
+<span class="nc" id="L139">        SystemNotification notification = systemNotificationRepository.findById(notificationId)</span>
+<span class="nc" id="L140">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy notification với ID: &quot; + notificationId));</span>
+        
+<span class="nc" id="L142">        systemNotificationMapper.applyUpdateToEntity(notification, dto);</span>
+<span class="nc" id="L143">        SystemNotification saved = systemNotificationRepository.save(notification);</span>
+        
+<span class="nc" id="L145">        return systemNotificationMapper.entityToResponseDTO(saved);</span>
+    }
+
+    /**
+     * Xóa notification
+     */
+    public void deleteNotification(Long notificationId) {
+<span class="nc" id="L152">        SystemNotification notification = systemNotificationRepository.findById(notificationId)</span>
+<span class="nc" id="L153">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy notification với ID: &quot; + notificationId));</span>
+        
+<span class="nc" id="L155">        systemNotificationRepository.delete(notification);</span>
+<span class="nc" id="L156">    }</span>
+
+    /**
+     * Xóa notifications cũ (cleanup)
+     */
+    public void deleteOldNotifications(int daysOld) {
+<span class="nc" id="L162">        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysOld);</span>
+<span class="nc" id="L163">        systemNotificationRepository.deleteByCreatedAtBefore(cutoffDate);</span>
+<span class="nc" id="L164">    }</span>
+
+    /**
+     * Đếm số notifications theo appointment
+     */
+    @Transactional(readOnly = true)
+    public Long countNotificationsByAppointment(Long appointmentId) {
+<span class="nc" id="L171">        return systemNotificationRepository.countByAppointmentAppointmentId(appointmentId);</span>
+    }
+
+    /**
+     * Đếm số notifications hệ thống
+     */
+    @Transactional(readOnly = true)
+    public Long countSystemNotifications() {
+<span class="nc" id="L179">        return systemNotificationRepository.countByAppointmentIsNull();</span>
+    }
+
+    /**
+     * Tạo notification tự động cho appointment events
+     */
+    public SystemNotificationDTO.Response createAppointmentNotification(
+            Long appointmentId, String title, String message) {
+        
+<span class="nc" id="L188">        Appointment appointment = appointmentRepository.findById(appointmentId)</span>
+<span class="nc" id="L189">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy appointment với ID: &quot; + appointmentId));</span>
+        
+<span class="nc" id="L191">        SystemNotificationDTO.Create dto = new SystemNotificationDTO.Create();</span>
+<span class="nc" id="L192">        dto.setTitle(title);</span>
+<span class="nc" id="L193">        dto.setMessage(message);</span>
+<span class="nc" id="L194">        dto.setAppointmentId(appointmentId);</span>
+        
+<span class="nc" id="L196">        return createNotification(dto);</span>
+    }
+
+    /**
+     * Tạo notification hệ thống
+     */
+    public SystemNotificationDTO.Response createSystemNotification(String title, String message) {
+<span class="nc" id="L203">        SystemNotificationDTO.Create dto = new SystemNotificationDTO.Create();</span>
+<span class="nc" id="L204">        dto.setTitle(title);</span>
+<span class="nc" id="L205">        dto.setMessage(message);</span>
+<span class="nc" id="L206">        dto.setAppointmentId(null); // System notification</span>
+        
+<span class="nc" id="L208">        return createNotification(dto);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

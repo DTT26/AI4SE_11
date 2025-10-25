@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Department.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.model</a> &gt; <span class="el_source">Department.java</span></div><h1>Department.java</h1><pre class="source lang-java linenums">package com.example.backend.model;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = &quot;Departments&quot;)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+public class Department {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;DepartmentID&quot;)
+    private Long id;
+
+    @NotBlank(message = &quot;Tên khoa không được để trống&quot;)
+    @Size(max = 100, message = &quot;Tên khoa không được quá 100 ký tự&quot;)
+    @Column(name = &quot;DepartmentName&quot;, nullable = false, columnDefinition = &quot;NVARCHAR(MAX)&quot;)
+    private String departmentName;
+
+    @Size(max = 255, message = &quot;Mô tả không được quá 255 ký tự&quot;)
+    @Column(name = &quot;Description&quot;, columnDefinition = &quot;NVARCHAR(MAX)&quot;)
+    private String description;
+
+    @Size(max = 500, message = &quot;URL ảnh không được quá 500 ký tự&quot;)
+    @Column(name = &quot;ImageUrl&quot;)
+    private String imageUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;Status&quot;)
+    private DepartmentStatus status = DepartmentStatus.ACTIVE;
+
+<span class="fc" id="L49">    public enum DepartmentStatus {</span>
+<span class="fc" id="L50">        ACTIVE,      // Khoa đang hoạt động bình thường</span>
+<span class="fc" id="L51">        INACTIVE,    // Khoa đang bảo trì (sử dụng thay cho MAINTENANCE)</span>
+<span class="fc" id="L52">        MAINTENANCE, // Khoa đang bảo trì (giữ để tương thích ngược)</span>
+<span class="fc" id="L53">        CLOSED       // Khoa đã ngừng hoạt động hoàn toàn</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

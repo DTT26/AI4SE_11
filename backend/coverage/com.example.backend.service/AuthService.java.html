@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">AuthService.java</span></div><h1>AuthService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.util.List;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.dto.AuthDTO;
+import com.example.backend.dto.UserDTO;
+import com.example.backend.exception.ConflictException;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.UserMapper;
+import com.example.backend.model.Role;
+import com.example.backend.model.User;
+import com.example.backend.model.Doctor;
+import com.example.backend.model.Patient;
+import com.example.backend.model.Department;
+import com.example.backend.repository.RoleRepository;
+import com.example.backend.repository.UserRepository;
+import com.example.backend.repository.DoctorRepository;
+import com.example.backend.repository.PatientRepository;
+import com.example.backend.repository.DepartmentRepository;
+import com.example.backend.service.EmailService;
+import com.example.backend.service.PatientService;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+    private final DoctorRepository doctorRepository;
+    private final PatientRepository patientRepository;
+    private final DepartmentRepository departmentRepository;
+    private final EmailOtpService emailOtpService;
+    private final EmailService emailService;
+    private final PatientService patientService;
+
+    public AuthDTO.LoginResponse login(AuthDTO.LoginRequest loginRequest) {
+        try {
+<span class="nc" id="L47">            User user = userRepository.findByEmailWithRole(loginRequest.getEmail())</span>
+<span class="nc" id="L48">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy người dùng với email: &quot; + loginRequest.getEmail()));</span>
+
+            // Kiểm tra trạng thái user
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            if (user.getStatus() != User.UserStatus.ACTIVE) {</span>
+<span class="nc" id="L52">                return new AuthDTO.LoginResponse(&quot;Tài khoản đã bị khóa hoặc không hoạt động&quot;, false, null, null);</span>
+            }
+
+            // Kiểm tra mật khẩu (tạm thời so sánh trực tiếp - sau này sẽ dùng BCrypt)
+<span class="nc bnc" id="L56" title="All 2 branches missed.">            if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {</span>
+<span class="nc" id="L57">                return new AuthDTO.LoginResponse(&quot;Mật khẩu không chính xác&quot;, false, null, null);</span>
+            }
+
+            // Chuyển đổi sang DTO
+<span class="nc" id="L61">            UserDTO.Response userResponse = userMapper.entityToResponseDTO(user);</span>
+
+<span class="nc" id="L63">            return new AuthDTO.LoginResponse(&quot;Đăng nhập thành công&quot;, true, userResponse, null);</span>
+
+<span class="nc" id="L65">        } catch (NotFoundException e) {</span>
+<span class="nc" id="L66">            return new AuthDTO.LoginResponse(&quot;Email hoặc mật khẩu không chính xác&quot;, false, null, null);</span>
+<span class="nc" id="L67">        } catch (Exception e) {</span>
+<span class="nc" id="L68">            return new AuthDTO.LoginResponse(&quot;Có lỗi xảy ra trong quá trình đăng nhập&quot;, false, null, null);</span>
+        }
+    }
+
+    public AuthDTO.RegisterResponse register(AuthDTO.RegisterRequest registerRequest) {
+        try {
+            // Kiểm tra email đã tồn tại
+<span class="nc bnc" id="L75" title="All 2 branches missed.">            if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {</span>
+<span class="nc" id="L76">                return new AuthDTO.RegisterResponse(&quot;Email đã được sử dụng&quot;, false, null);</span>
+            }
+
+            // Kiểm tra mật khẩu xác nhận
+<span class="nc bnc" id="L80" title="All 2 branches missed.">            if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {</span>
+<span class="nc" id="L81">                return new AuthDTO.RegisterResponse(&quot;Mật khẩu xác nhận không khớp&quot;, false, null);</span>
+            }
+
+            // Xác định role cho user
+<span class="nc bnc" id="L85" title="All 4 branches missed.">            final String roleName = (registerRequest.getRole() == null || registerRequest.getRole().trim().isEmpty()) </span>
+<span class="nc" id="L86">                    ? &quot;Patient&quot; </span>
+<span class="nc" id="L87">                    : registerRequest.getRole();</span>
+            
+            // Tìm role
+<span class="nc" id="L90">            Role userRole = roleRepository.findByName(roleName)</span>
+<span class="nc" id="L91">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy role: &quot; + roleName));</span>
+
+            // Tạo user mới
+<span class="nc" id="L94">            User newUser = new User();</span>
+<span class="nc" id="L95">            newUser.setEmail(registerRequest.getEmail());</span>
+<span class="nc" id="L96">            newUser.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));</span>
+<span class="nc" id="L97">            newUser.setFirstName(registerRequest.getFirstName());</span>
+<span class="nc" id="L98">            newUser.setLastName(registerRequest.getLastName());</span>
+<span class="nc" id="L99">            newUser.setPhone(registerRequest.getPhone());</span>
+<span class="nc" id="L100">            newUser.setGender(registerRequest.getGender());</span>
+<span class="nc" id="L101">            newUser.setDateOfBirth(registerRequest.getDateOfBirth());</span>
+<span class="nc" id="L102">            newUser.setAddress(registerRequest.getAddress());</span>
+<span class="nc" id="L103">            newUser.setStatus(User.UserStatus.ACTIVE);</span>
+<span class="nc" id="L104">            newUser.setRole(userRole);</span>
+
+            // Lưu user
+<span class="nc" id="L107">            User savedUser = userRepository.save(newUser);</span>
+            
+            // Tạo Doctor hoặc Patient dựa trên role
+            try {
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                if (&quot;Doctor&quot;.equalsIgnoreCase(roleName)) {</span>
+<span class="nc" id="L112">                    createDoctor(savedUser, registerRequest);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">                } else if (&quot;Patient&quot;.equalsIgnoreCase(roleName)) {</span>
+<span class="nc" id="L114">                    createPatient(savedUser, registerRequest);</span>
+                }
+<span class="nc" id="L116">            } catch (Exception e) {</span>
+<span class="nc" id="L117">                System.err.println(&quot;⚠️ Error creating Doctor/Patient, but User was created: &quot; + e.getMessage());</span>
+                // Không throw exception để User vẫn được tạo
+<span class="nc" id="L119">            }</span>
+            
+            // Gửi email chào mừng thông minh
+            try {
+<span class="nc" id="L123">                System.out.println(&quot;🔄 Bắt đầu gửi email chào mừng cho: &quot; + savedUser.getEmail());</span>
+<span class="nc" id="L124">                sendWelcomeEmail(savedUser);</span>
+<span class="nc" id="L125">                System.out.println(&quot;✅ Email chào mừng đã được gửi thành công!&quot;);</span>
+<span class="nc" id="L126">            } catch (Exception e) {</span>
+                // Không throw exception để không ảnh hưởng đến việc tạo tài khoản
+<span class="nc" id="L128">                System.err.println(&quot;❌ LỖI: Không thể gửi email chào mừng: &quot; + e.getMessage());</span>
+<span class="nc" id="L129">                e.printStackTrace();</span>
+<span class="nc" id="L130">            }</span>
+
+            // Chuyển đổi sang DTO
+<span class="nc" id="L133">            UserDTO.Response userResponse = userMapper.entityToResponseDTO(savedUser);</span>
+
+<span class="nc" id="L135">            return new AuthDTO.RegisterResponse(&quot;Đăng ký thành công&quot;, true, userResponse);</span>
+
+<span class="nc" id="L137">        } catch (ConflictException e) {</span>
+<span class="nc" id="L138">            return new AuthDTO.RegisterResponse(&quot;Email đã được sử dụng&quot;, false, null);</span>
+<span class="nc" id="L139">        } catch (Exception e) {</span>
+<span class="nc" id="L140">            return new AuthDTO.RegisterResponse(&quot;Có lỗi xảy ra trong quá trình đăng ký&quot;, false, null);</span>
+        }
+    }
+    
+    private void createDoctor(User user, AuthDTO.RegisterRequest request) {
+        try {
+<span class="nc" id="L146">            Doctor doctor = new Doctor();</span>
+<span class="nc" id="L147">            doctor.setDoctorId(user.getId()); // Set doctorId = userId</span>
+<span class="nc" id="L148">            doctor.setUser(user);</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">            doctor.setSpecialty(request.getSpecialty() != null ? request.getSpecialty() : &quot;Chưa xác định&quot;);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">            doctor.setBio(request.getBio() != null ? request.getBio() : &quot;Chưa có thông tin&quot;);</span>
+            
+            // Department là bắt buộc trong database, tìm department mặc định nếu không có
+<span class="nc" id="L153">            Department department = null;</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">            if (request.getDepartmentId() != null) {</span>
+<span class="nc" id="L155">                department = departmentRepository.findById(request.getDepartmentId()).orElse(null);</span>
+            }
+            
+            // Nếu không có department, lấy department đầu tiên làm mặc định
+<span class="nc bnc" id="L159" title="All 2 branches missed.">            if (department == null) {</span>
+<span class="nc" id="L160">                department = departmentRepository.findAll().stream().findFirst().orElse(null);</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">                if (department == null) {</span>
+<span class="nc" id="L162">                    throw new RuntimeException(&quot;Không tìm thấy department nào trong hệ thống&quot;);</span>
+                }
+<span class="nc" id="L164">                System.out.println(&quot;⚠️ Using default department: &quot; + department.getDepartmentName());</span>
+            }
+            
+<span class="nc" id="L167">            doctor.setDepartment(department);</span>
+<span class="nc" id="L168">            doctorRepository.save(doctor);</span>
+<span class="nc" id="L169">            System.out.println(&quot;✅ Created Doctor for user: &quot; + user.getEmail() + &quot; with ID: &quot; + user.getId());</span>
+<span class="nc" id="L170">        } catch (Exception e) {</span>
+<span class="nc" id="L171">            System.err.println(&quot;❌ Error creating Doctor: &quot; + e.getMessage());</span>
+<span class="nc" id="L172">            e.printStackTrace();</span>
+<span class="nc" id="L173">            throw e; // Re-throw để transaction rollback</span>
+<span class="nc" id="L174">        }</span>
+<span class="nc" id="L175">    }</span>
+    
+    private void createPatient(User user, AuthDTO.RegisterRequest request) {
+        try {
+<span class="nc" id="L179">            Patient patient = new Patient();</span>
+<span class="nc" id="L180">            patient.setPatientId(user.getId()); // Set patientId = userId</span>
+<span class="nc" id="L181">            patient.setUser(user);</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">            patient.setMedicalHistory(request.getMedicalHistory() != null ? request.getMedicalHistory() : &quot;Chưa có thông tin&quot;);</span>
+            
+<span class="nc" id="L184">            patientRepository.save(patient);</span>
+<span class="nc" id="L185">            System.out.println(&quot;✅ Created Patient for user: &quot; + user.getEmail() + &quot; with ID: &quot; + user.getId());</span>
+<span class="nc" id="L186">        } catch (Exception e) {</span>
+<span class="nc" id="L187">            System.err.println(&quot;❌ Error creating Patient: &quot; + e.getMessage());</span>
+<span class="nc" id="L188">            e.printStackTrace();</span>
+<span class="nc" id="L189">            throw e; // Re-throw để transaction rollback</span>
+<span class="nc" id="L190">        }</span>
+<span class="nc" id="L191">    }</span>
+
+    public AuthDTO.LogoutResponse logout(AuthDTO.LogoutRequest logoutRequest) {
+        try {
+            // Hiện tại chỉ trả về success
+            // Sau này sẽ implement:
+            // 1. Validate JWT token
+            // 2. Add token to blacklist
+            // 3. Clear session if any
+            
+<span class="nc bnc" id="L201" title="All 4 branches missed.">            if (logoutRequest != null &amp;&amp; logoutRequest.getToken() != null) {</span>
+                // TODO: Implement token invalidation
+<span class="nc" id="L203">                System.out.println(&quot;DEBUG: Invalidating token: &quot; + logoutRequest.getToken());</span>
+            }
+            
+<span class="nc" id="L206">            return new AuthDTO.LogoutResponse(&quot;Đăng xuất thành công&quot;, true);</span>
+            
+<span class="nc" id="L208">        } catch (Exception e) {</span>
+<span class="nc" id="L209">            return new AuthDTO.LogoutResponse(&quot;Có lỗi xảy ra trong quá trình đăng xuất&quot;, false);</span>
+        }
+    }
+
+    // Fix encoding issues
+    private String fixEncoding(String text) {
+<span class="nc bnc" id="L215" title="All 2 branches missed.">        if (text == null) return null;</span>
+        
+        try {
+            // Common encoding fixes for Vietnamese characters
+<span class="nc" id="L219">            text = text.replace(&quot;Ã¹&quot;, &quot;ù&quot;)</span>
+<span class="nc" id="L220">                      .replace(&quot;Ã¡&quot;, &quot;á&quot;)</span>
+<span class="nc" id="L221">                      .replace(&quot;Ã &quot;, &quot;à&quot;)</span>
+<span class="nc" id="L222">                      .replace(&quot;Ã£&quot;, &quot;ã&quot;)</span>
+<span class="nc" id="L223">                      .replace(&quot;Ã¢&quot;, &quot;â&quot;)</span>
+<span class="nc" id="L224">                      .replace(&quot;Ã¨&quot;, &quot;è&quot;)</span>
+<span class="nc" id="L225">                      .replace(&quot;Ã©&quot;, &quot;é&quot;)</span>
+<span class="nc" id="L226">                      .replace(&quot;Ãª&quot;, &quot;ê&quot;)</span>
+<span class="nc" id="L227">                      .replace(&quot;Ã¬&quot;, &quot;ì&quot;)</span>
+<span class="nc" id="L228">                      .replace(&quot;Ã­&quot;, &quot;í&quot;)</span>
+<span class="nc" id="L229">                      .replace(&quot;Ã³&quot;, &quot;ó&quot;)</span>
+<span class="nc" id="L230">                      .replace(&quot;Ã²&quot;, &quot;ò&quot;)</span>
+<span class="nc" id="L231">                      .replace(&quot;Ãµ&quot;, &quot;õ&quot;)</span>
+<span class="nc" id="L232">                      .replace(&quot;Ã´&quot;, &quot;ô&quot;)</span>
+<span class="nc" id="L233">                      .replace(&quot;Ã¹&quot;, &quot;ù&quot;)</span>
+<span class="nc" id="L234">                      .replace(&quot;Ãº&quot;, &quot;ú&quot;)</span>
+<span class="nc" id="L235">                      .replace(&quot;Ã½&quot;, &quot;ý&quot;)</span>
+<span class="nc" id="L236">                      .replace(&quot;Ä&quot;, &quot;Đ&quot;)</span>
+<span class="nc" id="L237">                      .replace(&quot;Ä'&quot;, &quot;đ&quot;)</span>
+                      // Fix specific Google OAuth encoding issues
+<span class="nc" id="L239">                      .replace(&quot;TẤ&quot;, &quot;Tấn&quot;)</span>
+<span class="nc" id="L240">                      .replace(&quot;TẤ¹ng&quot;, &quot;Tùng&quot;)</span>
+<span class="nc" id="L241">                      .replace(&quot;¹ng&quot;, &quot;ùng&quot;);</span>
+            
+<span class="nc" id="L243">            System.out.println(&quot;DEBUG OAuth: Fixed encoding: '&quot; + text + &quot;'&quot;);</span>
+<span class="nc" id="L244">            return text;</span>
+<span class="nc" id="L245">        } catch (Exception e) {</span>
+<span class="nc" id="L246">            System.err.println(&quot;ERROR: Failed to fix encoding for: &quot; + text);</span>
+<span class="nc" id="L247">            return text;</span>
+        }
+    }
+
+    // OAuth login/registration (Google)
+    public AuthDTO.LoginResponse oauthLogin(String email, String firstName, String lastName, String picture) {
+        try {
+<span class="nc" id="L254">            System.out.println(&quot;DEBUG OAuth: Searching for email = '&quot; + email + &quot;'&quot;);</span>
+<span class="nc" id="L255">            System.out.println(&quot;DEBUG OAuth: Picture URL = '&quot; + picture + &quot;'&quot;);</span>
+            
+            // Fix encoding issues
+<span class="nc" id="L258">            System.out.println(&quot;DEBUG OAuth: Original firstName = '&quot; + firstName + &quot;'&quot;);</span>
+<span class="nc" id="L259">            System.out.println(&quot;DEBUG OAuth: Original lastName = '&quot; + lastName + &quot;'&quot;);</span>
+<span class="nc bnc" id="L260" title="All 2 branches missed.">            if (firstName != null) {</span>
+<span class="nc" id="L261">                firstName = fixEncoding(firstName);</span>
+            }
+<span class="nc bnc" id="L263" title="All 2 branches missed.">            if (lastName != null) {</span>
+<span class="nc" id="L264">                lastName = fixEncoding(lastName);</span>
+            }
+<span class="nc" id="L266">            System.out.println(&quot;DEBUG OAuth: Fixed firstName = '&quot; + firstName + &quot;'&quot;);</span>
+<span class="nc" id="L267">            System.out.println(&quot;DEBUG OAuth: Fixed lastName = '&quot; + lastName + &quot;'&quot;);</span>
+            
+            // Try to find existing user
+<span class="nc" id="L270">            User user = userRepository.findByEmailWithRole(email).orElse(null);</span>
+            
+<span class="nc bnc" id="L272" title="All 2 branches missed.">            if (user == null) {</span>
+<span class="nc" id="L273">                System.out.println(&quot;DEBUG OAuth: User not found, creating new user with Patient role&quot;);</span>
+                
+                // Create new user with Patient role
+<span class="nc" id="L276">                final String roleName = &quot;Patient&quot;;</span>
+<span class="nc" id="L277">                Role userRole = roleRepository.findByName(roleName)</span>
+<span class="nc" id="L278">                        .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy role: &quot; + roleName));</span>
+
+<span class="nc" id="L280">                User newUser = new User();</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">                newUser.setEmail(email != null ? email : &quot;&quot;);</span>
+<span class="nc" id="L282">                newUser.setPasswordHash(&quot;oauth_google_user&quot;); // oauth user, dummy password to satisfy validation</span>
+<span class="nc" id="L283">                System.out.println(&quot;DEBUG OAuth: FirstName from Google = '&quot; + firstName + &quot;'&quot;);</span>
+<span class="nc" id="L284">                System.out.println(&quot;DEBUG OAuth: LastName from Google = '&quot; + lastName + &quot;'&quot;);</span>
+<span class="nc bnc" id="L285" title="All 4 branches missed.">                newUser.setFirstName(firstName != null &amp;&amp; !firstName.trim().isEmpty() ? firstName : &quot;Google&quot;);</span>
+<span class="nc bnc" id="L286" title="All 4 branches missed.">                newUser.setLastName(lastName != null &amp;&amp; !lastName.trim().isEmpty() ? lastName : &quot;User&quot;);</span>
+<span class="nc" id="L287">                System.out.println(&quot;DEBUG OAuth: Set FirstName = '&quot; + newUser.getFirstName() + &quot;'&quot;);</span>
+<span class="nc" id="L288">                System.out.println(&quot;DEBUG OAuth: Set LastName = '&quot; + newUser.getLastName() + &quot;'&quot;);</span>
+<span class="nc" id="L289">                System.out.println(&quot;DEBUG OAuth: Picture value = '&quot; + picture + &quot;'&quot;);</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">                System.out.println(&quot;DEBUG OAuth: Picture is null = &quot; + (picture == null));</span>
+<span class="nc bnc" id="L291" title="All 4 branches missed.">                System.out.println(&quot;DEBUG OAuth: Picture is empty = &quot; + (picture != null &amp;&amp; picture.trim().isEmpty()));</span>
+<span class="nc bnc" id="L292" title="All 4 branches missed.">                newUser.setAvatarUrl(picture != null &amp;&amp; !picture.trim().isEmpty() ? picture : null); // Lưu ảnh Google</span>
+<span class="nc" id="L293">                System.out.println(&quot;DEBUG OAuth: Setting avatarUrl for new user = '&quot; + picture + &quot;'&quot;);</span>
+<span class="nc" id="L294">                newUser.setStatus(User.UserStatus.ACTIVE);</span>
+<span class="nc" id="L295">                newUser.setRole(userRole);</span>
+
+<span class="nc" id="L297">                user = userRepository.save(newUser);</span>
+<span class="nc" id="L298">                System.out.println(&quot;DEBUG OAuth: Created new user with ID = &quot; + user.getId());</span>
+                
+                // Tạo Patient record cho user mới (nếu role là Patient)
+<span class="nc bnc" id="L301" title="All 2 branches missed.">                if (user.getRole() != null) {</span>
+<span class="nc" id="L302">                    String userRoleName = user.getRole().getName();</span>
+<span class="nc" id="L303">                    System.out.println(&quot;DEBUG OAuth: User role = '&quot; + userRoleName + &quot;'&quot;);</span>
+                    
+<span class="nc bnc" id="L305" title="All 4 branches missed.">                    if (&quot;PATIENT&quot;.equals(userRoleName) || &quot;Patient&quot;.equals(userRoleName)) {</span>
+                        try {
+<span class="nc" id="L307">                            System.out.println(&quot;DEBUG OAuth: Creating Patient record for new Google user ID = &quot; + user.getId());</span>
+<span class="nc" id="L308">                            patientService.createPatient(user.getId(), null, null);</span>
+<span class="nc" id="L309">                            System.out.println(&quot;DEBUG OAuth: Patient record created successfully for Google user&quot;);</span>
+<span class="nc" id="L310">                        } catch (Exception e) {</span>
+<span class="nc" id="L311">                            System.err.println(&quot;❌ LỖI: Không thể tạo Patient record cho Google user: &quot; + e.getMessage());</span>
+<span class="nc" id="L312">                            e.printStackTrace();</span>
+                            // Không throw exception để không ảnh hưởng đến việc đăng nhập
+<span class="nc" id="L314">                        }</span>
+                    } else {
+<span class="nc" id="L316">                        System.out.println(&quot;DEBUG OAuth: User role is not Patient, skipping Patient record creation&quot;);</span>
+                    }
+<span class="nc" id="L318">                } else {</span>
+<span class="nc" id="L319">                    System.out.println(&quot;DEBUG OAuth: User role is null, skipping Patient record creation&quot;);</span>
+                }
+                
+                // Gửi email chào mừng cho tài khoản Google mới tạo
+                try {
+<span class="nc" id="L324">                    System.out.println(&quot;🔄 Bắt đầu gửi email chào mừng cho Google user: &quot; + user.getEmail());</span>
+<span class="nc" id="L325">                    sendWelcomeEmail(user);</span>
+<span class="nc" id="L326">                    System.out.println(&quot;✅ Email chào mừng Google user đã được gửi thành công!&quot;);</span>
+<span class="nc" id="L327">                } catch (Exception e) {</span>
+                    // Không throw exception để không ảnh hưởng đến việc tạo tài khoản
+<span class="nc" id="L329">                    System.err.println(&quot;❌ LỖI: Không thể gửi email chào mừng cho Google user: &quot; + e.getMessage());</span>
+<span class="nc" id="L330">                    e.printStackTrace();</span>
+<span class="nc" id="L331">                }</span>
+<span class="nc" id="L332">            } else {</span>
+<span class="nc" id="L333">                System.out.println(&quot;DEBUG OAuth: Found existing user with ID = &quot; + user.getId() + &quot;, status = &quot; + user.getStatus());</span>
+<span class="nc" id="L334">                System.out.println(&quot;DEBUG OAuth: Current FirstName = '&quot; + user.getFirstName() + &quot;'&quot;);</span>
+<span class="nc" id="L335">                System.out.println(&quot;DEBUG OAuth: Current LastName = '&quot; + user.getLastName() + &quot;'&quot;);</span>
+<span class="nc" id="L336">                System.out.println(&quot;DEBUG OAuth: New FirstName = '&quot; + firstName + &quot;'&quot;);</span>
+<span class="nc" id="L337">                System.out.println(&quot;DEBUG OAuth: New LastName = '&quot; + lastName + &quot;'&quot;);</span>
+                
+                // Cập nhật thông tin từ Google nếu có
+<span class="nc" id="L340">                boolean needsUpdate = false;</span>
+                
+                // Cập nhật firstName nếu có
+<span class="nc bnc" id="L343" title="All 6 branches missed.">                if (firstName != null &amp;&amp; !firstName.trim().isEmpty() &amp;&amp; !firstName.equals(user.getFirstName())) {</span>
+<span class="nc" id="L344">                    user.setFirstName(firstName);</span>
+<span class="nc" id="L345">                    needsUpdate = true;</span>
+<span class="nc" id="L346">                    System.out.println(&quot;DEBUG OAuth: Updated firstName = '&quot; + firstName + &quot;'&quot;);</span>
+                }
+                
+                // Cập nhật lastName nếu có
+<span class="nc bnc" id="L350" title="All 6 branches missed.">                if (lastName != null &amp;&amp; !lastName.trim().isEmpty() &amp;&amp; !lastName.equals(user.getLastName())) {</span>
+<span class="nc" id="L351">                    user.setLastName(lastName);</span>
+<span class="nc" id="L352">                    needsUpdate = true;</span>
+<span class="nc" id="L353">                    System.out.println(&quot;DEBUG OAuth: Updated lastName = '&quot; + lastName + &quot;'&quot;);</span>
+                }
+                
+                // Fix encoding cho user hiện có nếu cần
+<span class="nc" id="L357">                String fixedFirstName = fixEncoding(user.getFirstName());</span>
+<span class="nc" id="L358">                String fixedLastName = fixEncoding(user.getLastName());</span>
+<span class="nc bnc" id="L359" title="All 4 branches missed.">                if (!fixedFirstName.equals(user.getFirstName()) || !fixedLastName.equals(user.getLastName())) {</span>
+<span class="nc" id="L360">                    user.setFirstName(fixedFirstName);</span>
+<span class="nc" id="L361">                    user.setLastName(fixedLastName);</span>
+<span class="nc" id="L362">                    needsUpdate = true;</span>
+<span class="nc" id="L363">                    System.out.println(&quot;DEBUG OAuth: Fixed encoding for existing user&quot;);</span>
+                }
+                
+                // Force update tên từ Google nếu có
+<span class="nc bnc" id="L367" title="All 4 branches missed.">                if (firstName != null &amp;&amp; !firstName.trim().isEmpty()) {</span>
+<span class="nc" id="L368">                    user.setFirstName(firstName);</span>
+<span class="nc" id="L369">                    needsUpdate = true;</span>
+<span class="nc" id="L370">                    System.out.println(&quot;DEBUG OAuth: Force updated firstName from Google = '&quot; + firstName + &quot;'&quot;);</span>
+                }
+<span class="nc bnc" id="L372" title="All 4 branches missed.">                if (lastName != null &amp;&amp; !lastName.trim().isEmpty()) {</span>
+<span class="nc" id="L373">                    user.setLastName(lastName);</span>
+<span class="nc" id="L374">                    needsUpdate = true;</span>
+<span class="nc" id="L375">                    System.out.println(&quot;DEBUG OAuth: Force updated lastName from Google = '&quot; + lastName + &quot;'&quot;);</span>
+                }
+                
+                // Force update avatar từ Google nếu có
+<span class="nc bnc" id="L379" title="All 4 branches missed.">                if (picture != null &amp;&amp; !picture.trim().isEmpty()) {</span>
+<span class="nc" id="L380">                    user.setAvatarUrl(picture);</span>
+<span class="nc" id="L381">                    needsUpdate = true;</span>
+<span class="nc" id="L382">                    System.out.println(&quot;DEBUG OAuth: Force updated avatarUrl from Google = '&quot; + picture + &quot;'&quot;);</span>
+                }
+                
+                // Cập nhật ảnh Google nếu có
+<span class="nc" id="L386">                System.out.println(&quot;DEBUG OAuth: Current user avatarUrl = '&quot; + user.getAvatarUrl() + &quot;'&quot;);</span>
+<span class="nc" id="L387">                System.out.println(&quot;DEBUG OAuth: New picture = '&quot; + picture + &quot;'&quot;);</span>
+<span class="nc bnc" id="L388" title="All 6 branches missed.">                if (picture != null &amp;&amp; !picture.trim().isEmpty() &amp;&amp; !picture.equals(user.getAvatarUrl())) {</span>
+<span class="nc" id="L389">                    user.setAvatarUrl(picture);</span>
+<span class="nc" id="L390">                    needsUpdate = true;</span>
+<span class="nc" id="L391">                    System.out.println(&quot;DEBUG OAuth: Updated user avatar with Google picture = '&quot; + picture + &quot;'&quot;);</span>
+                } else {
+<span class="nc" id="L393">                    System.out.println(&quot;DEBUG OAuth: No avatar update needed&quot;);</span>
+                }
+                
+                // Lưu user nếu có thay đổi
+<span class="nc bnc" id="L397" title="All 2 branches missed.">                if (needsUpdate) {</span>
+<span class="nc" id="L398">                    user = userRepository.save(user);</span>
+<span class="nc" id="L399">                    System.out.println(&quot;DEBUG OAuth: Saved user with updated information&quot;);</span>
+                }
+                
+                // Kiểm tra trạng thái user
+<span class="nc bnc" id="L403" title="All 2 branches missed.">                if (user.getStatus() != User.UserStatus.ACTIVE) {</span>
+<span class="nc" id="L404">                    return new AuthDTO.LoginResponse(&quot;Tài khoản đã bị khóa hoặc không hoạt động&quot;, false, null, null);</span>
+                }
+            }
+
+<span class="nc" id="L408">            UserDTO.Response userResponse = userMapper.entityToResponseDTO(user);</span>
+<span class="nc" id="L409">            System.out.println(&quot;DEBUG OAuth: Login successful for user = &quot; + user.getEmail());</span>
+<span class="nc" id="L410">            System.out.println(&quot;DEBUG OAuth: UserResponse avatarUrl = '&quot; + userResponse.getAvatarUrl() + &quot;'&quot;);</span>
+<span class="nc" id="L411">            return new AuthDTO.LoginResponse(&quot;Đăng nhập thành công (Google)&quot;, true, userResponse, null);</span>
+<span class="nc" id="L412">        } catch (Exception e) {</span>
+<span class="nc" id="L413">            System.err.println(&quot;ERROR OAuth: &quot; + e.getMessage());</span>
+<span class="nc" id="L414">            e.printStackTrace();</span>
+<span class="nc" id="L415">            return new AuthDTO.LoginResponse(&quot;Đăng nhập OAuth thất bại: &quot; + e.getMessage(), false, null, null);</span>
+        }
+    }
+    
+    // Fix all Google users with encoding issues
+    public void fixAllGoogleUsers() {
+        try {
+<span class="nc" id="L422">            List&lt;User&gt; googleUsers = userRepository.findByPasswordHash(&quot;oauth_google_user&quot;);</span>
+<span class="nc" id="L423">            System.out.println(&quot;DEBUG: Found &quot; + googleUsers.size() + &quot; Google users to fix&quot;);</span>
+            
+<span class="nc bnc" id="L425" title="All 2 branches missed.">            for (User user : googleUsers) {</span>
+<span class="nc" id="L426">                boolean needsUpdate = false;</span>
+                
+                // Fix firstName
+<span class="nc" id="L429">                String originalFirstName = user.getFirstName();</span>
+<span class="nc" id="L430">                String fixedFirstName = fixEncoding(originalFirstName);</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">                if (!fixedFirstName.equals(originalFirstName)) {</span>
+<span class="nc" id="L432">                    user.setFirstName(fixedFirstName);</span>
+<span class="nc" id="L433">                    needsUpdate = true;</span>
+<span class="nc" id="L434">                    System.out.println(&quot;DEBUG: Fixed firstName for user &quot; + user.getId() + &quot;: '&quot; + originalFirstName + &quot;' -&gt; '&quot; + fixedFirstName + &quot;'&quot;);</span>
+                }
+                
+                // Fix lastName
+<span class="nc" id="L438">                String originalLastName = user.getLastName();</span>
+<span class="nc" id="L439">                String fixedLastName = fixEncoding(originalLastName);</span>
+<span class="nc bnc" id="L440" title="All 2 branches missed.">                if (!fixedLastName.equals(originalLastName)) {</span>
+<span class="nc" id="L441">                    user.setLastName(fixedLastName);</span>
+<span class="nc" id="L442">                    needsUpdate = true;</span>
+<span class="nc" id="L443">                    System.out.println(&quot;DEBUG: Fixed lastName for user &quot; + user.getId() + &quot;: '&quot; + originalLastName + &quot;' -&gt; '&quot; + fixedLastName + &quot;'&quot;);</span>
+                }
+                
+<span class="nc bnc" id="L446" title="All 2 branches missed.">                if (needsUpdate) {</span>
+<span class="nc" id="L447">                    userRepository.save(user);</span>
+<span class="nc" id="L448">                    System.out.println(&quot;DEBUG: Updated user &quot; + user.getId());</span>
+                }
+<span class="nc" id="L450">            }</span>
+<span class="nc" id="L451">        } catch (Exception e) {</span>
+<span class="nc" id="L452">            System.err.println(&quot;ERROR: Failed to fix Google users: &quot; + e.getMessage());</span>
+<span class="nc" id="L453">        }</span>
+<span class="nc" id="L454">    }</span>
+
+    public AuthDTO.ResetPasswordResponse resetPassword(String email, String otp, String newPassword) {
+        try {
+            // Find user by email
+<span class="nc" id="L459">            User user = userRepository.findByEmailWithRole(email)</span>
+<span class="nc" id="L460">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy người dùng với email: &quot; + email));</span>
+
+            // Verify OTP trước khi cho phép reset password
+<span class="nc bnc" id="L463" title="All 2 branches missed.">            if (!emailOtpService.verifyOtp(email, otp)) {</span>
+<span class="nc" id="L464">                return new AuthDTO.ResetPasswordResponse(&quot;Mã OTP không hợp lệ hoặc đã hết hạn&quot;, false);</span>
+            }
+
+            // Hash and update password
+<span class="nc" id="L468">            user.setPasswordHash(passwordEncoder.encode(newPassword));</span>
+<span class="nc" id="L469">            userRepository.save(user);</span>
+
+            // Xóa OTP sau khi reset password thành công
+<span class="nc" id="L472">            emailOtpService.consumeOtp(email);</span>
+
+<span class="nc" id="L474">            return new AuthDTO.ResetPasswordResponse(&quot;Đặt lại mật khẩu thành công&quot;, true);</span>
+<span class="nc" id="L475">        } catch (NotFoundException e) {</span>
+<span class="nc" id="L476">            return new AuthDTO.ResetPasswordResponse(&quot;Không tìm thấy người dùng&quot;, false);</span>
+<span class="nc" id="L477">        } catch (Exception e) {</span>
+<span class="nc" id="L478">            return new AuthDTO.ResetPasswordResponse(&quot;Lỗi khi đặt lại mật khẩu: &quot; + e.getMessage(), false);</span>
+        }
+    }
+    
+    /**
+     * Gửi email chào mừng thông minh cho user mới
+     */
+    private void sendWelcomeEmail(User user) {
+        try {
+<span class="nc bnc" id="L487" title="All 2 branches missed.">            String roleName = user.getRole() != null ? user.getRole().getName() : &quot;Người dùng&quot;;</span>
+<span class="nc bnc" id="L488" title="All 2 branches missed.">            String userName = (user.getFirstName() != null ? user.getFirstName() : &quot;&quot;) + </span>
+<span class="nc bnc" id="L489" title="All 2 branches missed.">                            (user.getLastName() != null ? &quot; &quot; + user.getLastName() : &quot;&quot;);</span>
+            
+<span class="nc" id="L491">            String subject = &quot;🎉 Chào mừng bạn đến với ClinicBooking!&quot;;</span>
+<span class="nc" id="L492">            String content = buildWelcomeEmailContent(userName, roleName, user.getEmail(), user);</span>
+            
+<span class="nc" id="L494">            emailService.sendSimpleEmail(user.getEmail(), subject, content);</span>
+<span class="nc" id="L495">            System.out.println(&quot;✅ Email chào mừng đã gửi đến: &quot; + user.getEmail());</span>
+            
+<span class="nc" id="L497">        } catch (Exception e) {</span>
+<span class="nc" id="L498">            System.err.println(&quot;❌ Lỗi gửi email chào mừng: &quot; + e.getMessage());</span>
+<span class="nc" id="L499">            throw e;</span>
+<span class="nc" id="L500">        }</span>
+<span class="nc" id="L501">    }</span>
+    
+    /**
+     * Xây dựng nội dung email chào mừng thông minh
+     */
+    private String buildWelcomeEmailContent(String userName, String roleName, String email, User user) {
+<span class="nc" id="L507">        StringBuilder content = new StringBuilder();</span>
+        
+<span class="nc" id="L509">        content.append(&quot;Xin chào &quot;).append(userName).append(&quot;!\n\n&quot;);</span>
+<span class="nc" id="L510">        content.append(&quot;🎉 Chúc mừng bạn đã đăng ký thành công tài khoản &quot;).append(roleName).append(&quot; tại ClinicBooking!\n\n&quot;);</span>
+        
+        // Nội dung thông minh dựa trên role
+<span class="nc bnc" id="L513" title="All 2 branches missed.">        if (&quot;Doctor&quot;.equalsIgnoreCase(roleName)) {</span>
+<span class="nc" id="L514">            content.append(&quot;👨‍⚕️ Với tài khoản Bác sĩ, bạn có thể:\n&quot;);</span>
+<span class="nc" id="L515">            content.append(&quot;• Quản lý lịch khám và lịch làm việc\n&quot;);</span>
+<span class="nc" id="L516">            content.append(&quot;• Xem danh sách bệnh nhân\n&quot;);</span>
+<span class="nc" id="L517">            content.append(&quot;• Tạo đơn thuốc và hồ sơ bệnh án\n&quot;);</span>
+<span class="nc" id="L518">            content.append(&quot;• Nhận thông báo về lịch khám mới\n\n&quot;);</span>
+<span class="nc bnc" id="L519" title="All 2 branches missed.">        } else if (&quot;Patient&quot;.equalsIgnoreCase(roleName)) {</span>
+<span class="nc" id="L520">            content.append(&quot;🏥 Với tài khoản Bệnh nhân, bạn có thể:\n&quot;);</span>
+<span class="nc" id="L521">            content.append(&quot;• Đặt lịch khám với bác sĩ chuyên khoa\n&quot;);</span>
+<span class="nc" id="L522">            content.append(&quot;• Xem lịch sử khám bệnh\n&quot;);</span>
+<span class="nc" id="L523">            content.append(&quot;• Nhận nhắc nhở lịch khám\n&quot;);</span>
+<span class="nc" id="L524">            content.append(&quot;• Quản lý hồ sơ sức khỏe cá nhân\n\n&quot;);</span>
+        } else {
+<span class="nc" id="L526">            content.append(&quot;🔧 Với tài khoản &quot;).append(roleName).append(&quot;, bạn có thể:\n&quot;);</span>
+<span class="nc" id="L527">            content.append(&quot;• Truy cập các tính năng phù hợp với vai trò\n&quot;);</span>
+<span class="nc" id="L528">            content.append(&quot;• Nhận thông báo quan trọng\n\n&quot;);</span>
+        }
+        
+        // Thêm thông tin đặc biệt cho Google users
+<span class="nc bnc" id="L532" title="All 4 branches missed.">        if (user.getPasswordHash() != null &amp;&amp; user.getPasswordHash().equals(&quot;oauth_google_user&quot;)) {</span>
+<span class="nc" id="L533">            content.append(&quot;🔗 Đăng nhập bằng Google:\n&quot;);</span>
+<span class="nc" id="L534">            content.append(&quot;• Bạn có thể đăng nhập nhanh bằng tài khoản Google\n&quot;);</span>
+<span class="nc" id="L535">            content.append(&quot;• Thông tin cá nhân được đồng bộ từ Google\n&quot;);</span>
+<span class="nc" id="L536">            content.append(&quot;• Không cần nhớ mật khẩu riêng\n\n&quot;);</span>
+        }
+        
+<span class="nc" id="L539">        content.append(&quot;📧 Email đăng nhập: &quot;).append(email).append(&quot;\n&quot;);</span>
+        
+        // Thông tin đăng nhập khác nhau cho Google vs Regular users
+<span class="nc bnc" id="L542" title="All 4 branches missed.">        if (user.getPasswordHash() != null &amp;&amp; user.getPasswordHash().equals(&quot;oauth_google_user&quot;)) {</span>
+<span class="nc" id="L543">            content.append(&quot;🔗 Đăng nhập: Sử dụng tài khoản Google (không cần mật khẩu)\n\n&quot;);</span>
+        } else {
+<span class="nc" id="L545">            content.append(&quot;🔐 Mật khẩu: [Mật khẩu bạn đã đặt]\n\n&quot;);</span>
+        }
+        
+<span class="nc" id="L548">        content.append(&quot;💡 Mẹo sử dụng:\n&quot;);</span>
+<span class="nc" id="L549">        content.append(&quot;• Luôn kiểm tra email để nhận thông báo quan trọng\n&quot;);</span>
+<span class="nc" id="L550">        content.append(&quot;• Cập nhật thông tin cá nhân để được phục vụ tốt nhất\n&quot;);</span>
+<span class="nc" id="L551">        content.append(&quot;• Liên hệ hỗ trợ nếu cần trợ giúp\n\n&quot;);</span>
+        
+<span class="nc" id="L553">        content.append(&quot;Chúc bạn có trải nghiệm tuyệt vời với ClinicBooking!\n\n&quot;);</span>
+<span class="nc" id="L554">        content.append(&quot;Trân trọng,\n&quot;);</span>
+<span class="nc" id="L555">        content.append(&quot;Đội ngũ ClinicBooking 🏥&quot;);</span>
+        
+<span class="nc" id="L557">        return content.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MailConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.config</a> &gt; <span class="el_source">MailConfig.java</span></div><h1>MailConfig.java</h1><pre class="source lang-java linenums">package com.example.backend.config;
+
+import java.util.Properties;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+
+@Configuration
+<span class="nc" id="L12">public class MailConfig {</span>
+
+    @Bean
+    @ConditionalOnProperty(prefix = &quot;spring.mail&quot;, name = &quot;host&quot;)
+    public JavaMailSender javaMailSender(org.springframework.core.env.Environment env) {
+<span class="nc" id="L17">        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();</span>
+<span class="nc" id="L18">        mailSender.setHost(env.getProperty(&quot;spring.mail.host&quot;));</span>
+<span class="nc" id="L19">        String port = env.getProperty(&quot;spring.mail.port&quot;);</span>
+<span class="nc bnc" id="L20" title="All 2 branches missed.">        if (port != null) {</span>
+<span class="nc" id="L21">            mailSender.setPort(Integer.parseInt(port));</span>
+        }
+<span class="nc" id="L23">        mailSender.setUsername(env.getProperty(&quot;spring.mail.username&quot;));</span>
+<span class="nc" id="L24">        mailSender.setPassword(env.getProperty(&quot;spring.mail.password&quot;));</span>
+
+<span class="nc" id="L26">        Properties props = mailSender.getJavaMailProperties();</span>
+<span class="nc" id="L27">        props.put(&quot;mail.transport.protocol&quot;, &quot;smtp&quot;);</span>
+<span class="nc" id="L28">        props.put(&quot;mail.smtp.auth&quot;, env.getProperty(&quot;spring.mail.properties.mail.smtp.auth&quot;, &quot;true&quot;));</span>
+<span class="nc" id="L29">        props.put(&quot;mail.smtp.starttls.enable&quot;, env.getProperty(&quot;spring.mail.properties.mail.smtp.starttls.enable&quot;, &quot;true&quot;));</span>
+<span class="nc" id="L30">        props.put(&quot;mail.debug&quot;, env.getProperty(&quot;spring.mail.debug&quot;, &quot;false&quot;));</span>
+
+<span class="nc" id="L32">        return mailSender;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

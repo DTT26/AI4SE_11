@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AppointmentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">AppointmentService.java</span></div><h1>AppointmentService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.dto.AppointmentDTO;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.AppointmentMapper;
+import com.example.backend.model.Appointment;
+import com.example.backend.model.Doctor;
+import com.example.backend.model.DoctorSchedule;
+import com.example.backend.model.Patient;
+import com.example.backend.repository.AppointmentRepository;
+import com.example.backend.repository.DoctorRepository;
+import com.example.backend.repository.DoctorScheduleRepository;
+import com.example.backend.repository.PatientRepository;
+import com.example.backend.service.EmailService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+<span class="fc" id="L28">@Slf4j</span>
+public class AppointmentService {
+
+    private final AppointmentRepository appointmentRepository;
+    private final PatientRepository patientRepository;
+    private final DoctorRepository doctorRepository;
+    private final DoctorScheduleRepository doctorScheduleRepository;
+    private final AppointmentMapper appointmentMapper;
+    private final EmailService emailService;
+
+    public AppointmentDTO.Response create(AppointmentDTO.Create dto) {
+        // Cho phép patient null khi bác sĩ tạo slot trống
+<span class="fc" id="L40">        Patient patient = null;</span>
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">        if (dto.getPatientId() != null) {</span>
+<span class="fc" id="L42">            patient = patientRepository.findById(dto.getPatientId())</span>
+<span class="fc" id="L43">                    .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bệnh nhân với ID: &quot; + dto.getPatientId()));</span>
+        }
+        
+<span class="fc" id="L46">        Doctor doctor = doctorRepository.findById(dto.getDoctorId())</span>
+<span class="fc" id="L47">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bác sĩ với ID: &quot; + dto.getDoctorId()));</span>
+        
+        // ScheduleID là BẮT BUỘC - Appointment phải thuộc về một DoctorSchedule
+<span class="fc" id="L50">        DoctorSchedule schedule = doctorScheduleRepository.findById(dto.getScheduleId())</span>
+<span class="fc" id="L51">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy lịch trình với ID: &quot; + dto.getScheduleId()));</span>
+        
+        // Validate: Schedule phải thuộc về doctor này
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        if (!schedule.getDoctor().getDoctorId().equals(dto.getDoctorId())) {</span>
+<span class="nc" id="L55">            throw new IllegalStateException(&quot;Lịch trình không thuộc về bác sĩ này&quot;);</span>
+        }
+        
+        // Validate: Schedule phải Available
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if (!&quot;Available&quot;.equals(schedule.getStatus())) {</span>
+<span class="fc" id="L60">            throw new IllegalStateException(&quot;Lịch trình không khả dụng&quot;);</span>
+        }
+        
+        // Validate: Appointment phải nằm TRONG khoảng thời gian của DoctorSchedule
+<span class="fc" id="L64">        java.time.LocalDate scheduleDate = schedule.getWorkDate();</span>
+<span class="fc" id="L65">        java.time.LocalTime scheduleStartTime = schedule.getStartTime();</span>
+<span class="fc" id="L66">        java.time.LocalTime scheduleEndTime = schedule.getEndTime();</span>
+        
+<span class="fc" id="L68">        java.time.LocalDate appointmentDate = dto.getStartTime().toLocalDate();</span>
+<span class="fc" id="L69">        java.time.LocalTime appointmentStartTime = dto.getStartTime().toLocalTime();</span>
+<span class="fc" id="L70">        java.time.LocalTime appointmentEndTime = dto.getEndTime().toLocalTime();</span>
+        
+        // Kiểm tra ngày phải trùng
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        if (!appointmentDate.equals(scheduleDate)) {</span>
+<span class="nc" id="L74">            throw new IllegalStateException(</span>
+                &quot;Ngày khám (&quot; + appointmentDate + &quot;) phải trùng với ngày làm việc (&quot; + scheduleDate + &quot;)&quot;
+            );
+        }
+        
+        // Kiểm tra giờ phải nằm trong khoảng
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        if (appointmentStartTime.isBefore(scheduleStartTime)) {</span>
+<span class="nc" id="L81">            throw new IllegalStateException(</span>
+                &quot;Giờ bắt đầu (&quot; + appointmentStartTime + &quot;) phải sau giờ bắt đầu làm việc (&quot; + scheduleStartTime + &quot;)&quot;
+            );
+        }
+        
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        if (appointmentEndTime.isAfter(scheduleEndTime)) {</span>
+<span class="nc" id="L87">            throw new IllegalStateException(</span>
+                &quot;Giờ kết thúc (&quot; + appointmentEndTime + &quot;) phải trước giờ kết thúc làm việc (&quot; + scheduleEndTime + &quot;)&quot;
+            );
+        }
+        
+        // =====================================================================
+        // Validate: Không cho phép tạo khung giờ trùng lặp
+        // Kiểm tra xem đã có appointment nào của bác sĩ này trong khoảng thời gian này chưa
+        // =====================================================================
+<span class="fc" id="L96">        List&lt;Appointment&gt; existingAppointments = appointmentRepository.findByDoctor_DoctorId(dto.getDoctorId());</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        for (Appointment existing : existingAppointments) {</span>
+            // Kiểm tra overlap: 
+            // Appointment mới overlap nếu startTime &lt; existing.endTime VÀ endTime &gt; existing.startTime
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">            if (dto.getStartTime().isBefore(existing.getEndTime()) &amp;&amp; </span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">                dto.getEndTime().isAfter(existing.getStartTime())) {</span>
+<span class="fc" id="L102">                throw new IllegalStateException(</span>
+<span class="fc" id="L103">                    String.format(&quot;Khung giờ bị trùng với appointment đã tồn tại (ID: %d) từ %s đến %s&quot;,</span>
+<span class="fc" id="L104">                        existing.getAppointmentId(),</span>
+<span class="fc" id="L105">                        existing.getStartTime(),</span>
+<span class="fc" id="L106">                        existing.getEndTime()</span>
+                    )
+                );
+            }
+<span class="nc" id="L110">        }</span>
+
+<span class="fc" id="L112">        Appointment entity = appointmentMapper.createDTOToEntity(dto, patient, doctor, schedule);</span>
+<span class="fc" id="L113">        Appointment saved = appointmentRepository.save(entity);</span>
+
+<span class="fc" id="L115">        return appointmentMapper.entityToResponseDTO(saved);</span>
+    }
+
+    // Helper to send notification emails for appointment events
+    private void notifyPatient(Appointment appointment, String subject, String body) {
+<span class="pc bpc" id="L120" title="3 of 6 branches missed.">        if (appointment == null || appointment.getPatient() == null || appointment.getPatient().getUser() == null) return;</span>
+<span class="fc" id="L121">        String email = appointment.getPatient().getUser().getEmail();</span>
+<span class="fc" id="L122">        emailService.sendSimpleEmail(email, subject, body);</span>
+<span class="fc" id="L123">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;AppointmentDTO.Response&gt; getAll() {
+<span class="fc" id="L127">        List&lt;Appointment&gt; entities = appointmentRepository.findAll();</span>
+<span class="fc" id="L128">        return entities.stream()</span>
+<span class="fc" id="L129">                .map(appointmentMapper::entityToResponseDTO)</span>
+<span class="fc" id="L130">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentDTO.Response getById(Long appointmentId) {
+<span class="fc" id="L135">        Appointment entity = appointmentRepository.findById(appointmentId)</span>
+<span class="fc" id="L136">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy cuộc hẹn với ID: &quot; + appointmentId));</span>
+<span class="fc" id="L137">        return appointmentMapper.entityToResponseDTO(entity);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;AppointmentDTO.Response&gt; getByPatient(Long patientId) {
+<span class="fc" id="L142">        List&lt;Appointment&gt; list = appointmentRepository.findByPatient_PatientId(patientId);</span>
+<span class="fc" id="L143">        return list.stream().map(appointmentMapper::entityToResponseDTO).toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;AppointmentDTO.Response&gt; getByDoctor(Long doctorId) {
+<span class="fc" id="L148">        List&lt;Appointment&gt; list = appointmentRepository.findByDoctor_DoctorId(doctorId);</span>
+<span class="fc" id="L149">        return list.stream().map(appointmentMapper::entityToResponseDTO).toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;AppointmentDTO.Response&gt; getAvailableSlotsByDoctor(Long doctorId) {
+<span class="fc" id="L154">        List&lt;Appointment&gt; list = appointmentRepository.findByDoctor_DoctorId(doctorId);</span>
+        // Lọc các appointment có patient = null và status = &quot;Available&quot;
+<span class="fc" id="L156">        return list.stream()</span>
+<span class="pc bpc" id="L157" title="2 of 4 branches missed.">                .filter(apt -&gt; apt.getPatient() == null &amp;&amp; &quot;Available&quot;.equals(apt.getStatus()))</span>
+<span class="fc" id="L158">                .map(appointmentMapper::entityToResponseDTO)</span>
+<span class="fc" id="L159">                .toList();</span>
+    }
+
+    public AppointmentDTO.Response bookAppointment(Long appointmentId, Long patientId, String notes) {
+<span class="fc" id="L163">        Appointment entity = appointmentRepository.findById(appointmentId)</span>
+<span class="fc" id="L164">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy cuộc hẹn với ID: &quot; + appointmentId));</span>
+        
+        // Kiểm tra appointment còn available không
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (entity.getPatient() != null) {</span>
+<span class="fc" id="L168">            throw new IllegalStateException(&quot;Khung giờ này đã được đặt&quot;);</span>
+        }
+<span class="pc bpc" id="L170" title="1 of 2 branches missed.">        if (!&quot;Available&quot;.equals(entity.getStatus())) {</span>
+<span class="nc" id="L171">            throw new IllegalStateException(&quot;Khung giờ này không còn khả dụng&quot;);</span>
+        }
+        
+        // Tìm patient
+<span class="fc" id="L175">        log.info(&quot;🔍 Searching for patient with ID: {}&quot;, patientId);</span>
+<span class="fc" id="L176">        Optional&lt;Patient&gt; patientOpt = patientRepository.findById(patientId);</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">        if (patientOpt.isPresent()) {</span>
+<span class="fc" id="L178">            log.info(&quot;✅ Found patient: {}&quot;, patientOpt.get().getPatientId());</span>
+        } else {
+<span class="nc" id="L180">            log.error(&quot;❌ No patient found with ID: {}&quot;, patientId);</span>
+            // Debug: List all patients
+<span class="nc" id="L182">            List&lt;Patient&gt; allPatients = patientRepository.findAll();</span>
+<span class="nc" id="L183">            log.info(&quot;📊 Total patients in database: {}&quot;, allPatients.size());</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">            for (Patient p : allPatients) {</span>
+<span class="nc" id="L185">                log.info(&quot;👤 Patient ID: {}&quot;, p.getPatientId());</span>
+<span class="nc" id="L186">            }</span>
+        }
+<span class="fc" id="L188">        Patient patient = patientOpt</span>
+<span class="pc" id="L189">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy bệnh nhân với ID: &quot; + patientId));</span>
+        
+        // Cập nhật appointment
+<span class="fc" id="L192">        entity.setPatient(patient);</span>
+<span class="fc" id="L193">        entity.setStatus(&quot;Scheduled&quot;);</span>
+<span class="pc bpc" id="L194" title="2 of 4 branches missed.">        if (notes != null &amp;&amp; !notes.trim().isEmpty()) {</span>
+<span class="fc" id="L195">            entity.setNotes(notes);</span>
+        }
+        
+<span class="fc" id="L198">        Appointment saved = appointmentRepository.save(entity);</span>
+        
+        // Gửi email thông báo
+        try {
+<span class="fc" id="L202">            String subject = &quot;Đặt lịch khám thành công&quot;;</span>
+<span class="fc" id="L203">            String body = &quot;Bạn đã đặt lịch khám thành công vào &quot; + saved.getStartTime() + </span>
+<span class="fc" id="L204">                         &quot; với bác sĩ &quot; + saved.getDoctor().getUser().getFirstName() + &quot; &quot; + </span>
+<span class="fc" id="L205">                         saved.getDoctor().getUser().getLastName();</span>
+<span class="fc" id="L206">            notifyPatient(saved, subject, body);</span>
+<span class="nc" id="L207">        } catch (Exception ex) {</span>
+            // ignore email failures
+<span class="fc" id="L209">        }</span>
+        
+<span class="fc" id="L211">        return appointmentMapper.entityToResponseDTO(saved);</span>
+    }
+
+    public AppointmentDTO.Response update(Long appointmentId, AppointmentDTO.Update dto) {
+<span class="fc" id="L215">        Appointment entity = appointmentRepository.findById(appointmentId)</span>
+<span class="pc" id="L216">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy cuộc hẹn với ID: &quot; + appointmentId));</span>
+<span class="fc" id="L217">        appointmentMapper.applyUpdateToEntity(entity, dto);</span>
+<span class="fc" id="L218">        Appointment saved = appointmentRepository.save(entity);</span>
+        try {
+<span class="fc" id="L220">            String subject = &quot;Lịch khám đã được cập nhật&quot;;</span>
+<span class="fc" id="L221">            String body = &quot;Lịch khám của bạn đã được cập nhật. Vui lòng kiểm tra chi tiết trong ứng dụng.&quot;;</span>
+<span class="fc" id="L222">            notifyPatient(saved, subject, body);</span>
+<span class="nc" id="L223">        } catch (Exception ex) {</span>
+            // swallow - email failures shouldn't prevent update
+<span class="fc" id="L225">        }</span>
+<span class="fc" id="L226">        return appointmentMapper.entityToResponseDTO(saved);</span>
+    }
+
+    public void delete(Long appointmentId) {
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        if (!appointmentRepository.existsById(appointmentId)) {</span>
+<span class="fc" id="L231">            throw new NotFoundException(&quot;Không tìm thấy cuộc hẹn với ID: &quot; + appointmentId);</span>
+        }
+<span class="fc" id="L233">        appointmentRepository.deleteById(appointmentId);</span>
+<span class="fc" id="L234">    }</span>
+
+    public AppointmentDTO.Response cancelAppointment(Long appointmentId) {
+<span class="fc" id="L237">        Appointment entity = appointmentRepository.findById(appointmentId)</span>
+<span class="pc" id="L238">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy cuộc hẹn với ID: &quot; + appointmentId));</span>
+        
+        // Cập nhật status thành &quot;từ chối lịch hẹn&quot;
+<span class="fc" id="L241">        entity.setStatus(&quot;Từ chối lịch hẹn&quot;);</span>
+        
+        // Nếu có schedule, giải phóng slot
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">        if (entity.getSchedule() != null) {</span>
+<span class="fc" id="L245">            entity.getSchedule().setStatus(&quot;Available&quot;);</span>
+<span class="fc" id="L246">            doctorScheduleRepository.save(entity.getSchedule());</span>
+        }
+        
+<span class="fc" id="L249">        Appointment saved = appointmentRepository.save(entity);</span>
+        try {
+<span class="fc" id="L251">            String subject = &quot;Lịch khám đã bị hủy&quot;;</span>
+<span class="fc" id="L252">            String body = &quot;Lịch khám của bạn đã bị hủy. Vui lòng liên hệ nếu cần đặt lại.&quot;;</span>
+<span class="fc" id="L253">            notifyPatient(saved, subject, body);</span>
+<span class="nc" id="L254">        } catch (Exception ex) {</span>
+            // ignore
+<span class="fc" id="L256">        }</span>
+<span class="fc" id="L257">        return appointmentMapper.entityToResponseDTO(saved);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;AppointmentDTO.Response&gt; getAppointmentsByPatientAndDoctor(Long patientId, Long doctorId) {
+<span class="nc" id="L262">        List&lt;Appointment&gt; appointments = appointmentRepository.findByPatientIdAndDoctorId(patientId, doctorId);</span>
+<span class="nc" id="L263">        return appointments.stream()</span>
+<span class="nc" id="L264">                .map(appointmentMapper::entityToResponseDTO)</span>
+<span class="nc" id="L265">                .toList();</span>
+    }
+    
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

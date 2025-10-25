@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Payment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.model</a> &gt; <span class="el_source">Payment.java</span></div><h1>Payment.java</h1><pre class="source lang-java linenums">package com.example.backend.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = &quot;Payments&quot;)
+@JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+public class Payment {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;PaymentID&quot;)
+    private Long paymentId;
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;AppointmentID&quot;)
+    private Appointment appointment;
+    
+    @Column(name = &quot;PayOSPaymentId&quot;, unique = true)
+    private String payOSPaymentId;
+    
+    @Column(name = &quot;Amount&quot;, nullable = false)
+    private BigDecimal amount;
+    
+    @Column(name = &quot;Currency&quot;, nullable = false)
+    private String currency = &quot;VND&quot;;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;Status&quot;, nullable = false)
+    private PaymentStatus status = PaymentStatus.PENDING;
+    
+    @Column(name = &quot;PaymentMethod&quot;)
+    private String paymentMethod;
+    
+    @Column(name = &quot;PayOSCode&quot;)
+    private String payOSCode;
+    
+    @Column(name = &quot;PayOSLink&quot;)
+    private String payOSLink;
+    
+    @Column(name = &quot;Description&quot;)
+    private String description;
+    
+    @Column(name = &quot;CreatedAt&quot;, nullable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = &quot;UpdatedAt&quot;)
+    private LocalDateTime updatedAt;
+    
+    @Column(name = &quot;PaidAt&quot;)
+    private LocalDateTime paidAt;
+    
+    @Column(name = &quot;FailureReason&quot;)
+    private String failureReason;
+    
+    @PrePersist
+    protected void onCreate() {
+<span class="nc" id="L67">        this.createdAt = LocalDateTime.now();</span>
+<span class="nc" id="L68">        this.updatedAt = LocalDateTime.now();</span>
+<span class="nc" id="L69">    }</span>
+    
+    @PreUpdate
+    protected void onUpdate() {
+<span class="nc" id="L73">        this.updatedAt = LocalDateTime.now();</span>
+<span class="nc" id="L74">    }</span>
+    
+<span class="nc" id="L76">    public enum PaymentStatus {</span>
+<span class="nc" id="L77">        PENDING,    // Chờ thanh toán</span>
+<span class="nc" id="L78">        PAID,       // Đã thanh toán</span>
+<span class="nc" id="L79">        FAILED,     // Thanh toán thất bại</span>
+<span class="nc" id="L80">        CANCELLED,  // Hủy thanh toán</span>
+<span class="nc" id="L81">        REFUNDED    // Hoàn tiền</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

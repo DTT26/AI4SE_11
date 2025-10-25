@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>User.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.model</a> &gt; <span class="el_source">User.java</span></div><h1>User.java</h1><pre class="source lang-java linenums">package com.example.backend.model;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@Entity
+@Table(name = &quot;Users&quot;)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;UserID&quot;)
+    private Long id;
+
+    @NotBlank(message = &quot;Email không được để trống&quot;)
+    @Email(message = &quot;Email không hợp lệ&quot;)
+    @Size(max = 100, message = &quot;Email không được quá 100 ký tự&quot;)
+    @Column(name = &quot;Email&quot;, unique = true, nullable = false)
+    private String email;
+
+    @NotBlank(message = &quot;Mật khẩu không được để trống&quot;)
+    @Size(min = 6, max = 255, message = &quot;Mật khẩu phải có ít nhất 6 ký tự&quot;)
+    @Column(name = &quot;PasswordHash&quot;, nullable = false)
+    private String passwordHash;
+
+    @NotBlank(message = &quot;Tên không được để trống&quot;)
+    @Size(max = 50, message = &quot;Tên không được quá 50 ký tự&quot;)
+    @Column(name = &quot;FirstName&quot;, nullable = false, columnDefinition = &quot;NVARCHAR(MAX)&quot;)
+    private String firstName;
+
+    @NotBlank(message = &quot;Họ không được để trống&quot;)
+    @Size(max = 50, message = &quot;Họ không được quá 50 ký tự&quot;)
+    @Column(name = &quot;LastName&quot;, nullable = false, columnDefinition = &quot;NVARCHAR(MAX)&quot;)
+    private String lastName;
+
+    @Size(max = 20, message = &quot;Số điện thoại không được quá 20 ký tự&quot;)
+    @Column(name = &quot;Phone&quot;)
+    private String phone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;Gender&quot;)
+    private Gender gender;
+
+    @Column(name = &quot;DOB&quot;)
+    private LocalDate dateOfBirth;
+
+    @Size(max = 255, message = &quot;Địa chỉ không được quá 255 ký tự&quot;)
+    @Column(name = &quot;Address&quot;, columnDefinition = &quot;NVARCHAR(MAX)&quot;)
+    private String address;
+
+    @Size(max = 500, message = &quot;URL ảnh đại diện không được quá 500 ký tự&quot;)
+    @Column(name = &quot;AvatarUrl&quot;)
+    private String avatarUrl;
+
+    @CreationTimestamp
+    @Column(name = &quot;CreatedAt&quot;, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;Status&quot;)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;RoleID&quot;, referencedColumnName = &quot;RoleID&quot;, nullable = false)
+    private Role role;
+
+<span class="nc" id="L92">    public enum Gender {</span>
+<span class="nc" id="L93">        MALE(&quot;M&quot;), FEMALE(&quot;F&quot;), OTHER(&quot;O&quot;);</span>
+        
+        private final String code;
+<span class="nc" id="L96">Gender(String code) {</span>
+<span class="nc" id="L97">            this.code = code;</span>
+<span class="nc" id="L98">        }</span>
+        
+        public String getCode() {
+<span class="nc" id="L101">            return code;</span>
+        }
+    }
+
+<span class="fc" id="L105">    public enum UserStatus {</span>
+<span class="fc" id="L106">        ACTIVE, INACTIVE, SUSPENDED, DELETED</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

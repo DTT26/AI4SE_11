@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.mapper</a> &gt; <span class="el_source">UserMapper.java</span></div><h1>UserMapper.java</h1><pre class="source lang-java linenums">package com.example.backend.mapper;
+
+import org.springframework.stereotype.Component;
+
+import com.example.backend.dto.RoleDTO;
+import com.example.backend.dto.UserDTO;
+import com.example.backend.model.Role;
+import com.example.backend.model.User;
+
+@Component
+<span class="nc" id="L11">public class UserMapper {</span>
+
+    public User createDTOToEntity(UserDTO.Create createDTO, Role role, String encodedPassword) {
+<span class="nc" id="L14">        User user = new User();</span>
+<span class="nc" id="L15">        user.setEmail(createDTO.getEmail());</span>
+<span class="nc" id="L16">        user.setPasswordHash(encodedPassword);</span>
+<span class="nc" id="L17">        user.setFirstName(createDTO.getFirstName());</span>
+<span class="nc" id="L18">        user.setLastName(createDTO.getLastName());</span>
+<span class="nc" id="L19">        user.setPhone(createDTO.getPhone());</span>
+<span class="nc" id="L20">        user.setGender(createDTO.getGender());</span>
+<span class="nc" id="L21">        user.setDateOfBirth(createDTO.getDateOfBirth());</span>
+<span class="nc" id="L22">        user.setAddress(createDTO.getAddress());</span>
+<span class="nc" id="L23">        user.setAvatarUrl(createDTO.getAvatarUrl());</span>
+<span class="nc" id="L24">        user.setRole(role);</span>
+<span class="nc" id="L25">        user.setStatus(User.UserStatus.ACTIVE);</span>
+<span class="nc" id="L26">        return user;</span>
+    }
+
+    public void updateEntityFromDTO(User user, UserDTO.Update updateDTO) {
+<span class="nc bnc" id="L30" title="All 2 branches missed.">        if (updateDTO.getEmail() != null) {</span>
+<span class="nc" id="L31">            user.setEmail(updateDTO.getEmail());</span>
+        }
+<span class="nc bnc" id="L33" title="All 2 branches missed.">        if (updateDTO.getFirstName() != null) {</span>
+<span class="nc" id="L34">            user.setFirstName(updateDTO.getFirstName());</span>
+        }
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if (updateDTO.getLastName() != null) {</span>
+<span class="nc" id="L37">            user.setLastName(updateDTO.getLastName());</span>
+        }
+<span class="nc bnc" id="L39" title="All 2 branches missed.">        if (updateDTO.getPhone() != null) {</span>
+<span class="nc" id="L40">            user.setPhone(updateDTO.getPhone());</span>
+        }
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (updateDTO.getGender() != null) {</span>
+<span class="nc" id="L43">            user.setGender(updateDTO.getGender());</span>
+        }
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        if (updateDTO.getDateOfBirth() != null) {</span>
+<span class="nc" id="L46">            user.setDateOfBirth(updateDTO.getDateOfBirth());</span>
+        }
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (updateDTO.getAddress() != null) {</span>
+<span class="nc" id="L49">            user.setAddress(updateDTO.getAddress());</span>
+        }
+<span class="nc bnc" id="L51" title="All 2 branches missed.">        if (updateDTO.getAvatarUrl() != null) {</span>
+<span class="nc" id="L52">            user.setAvatarUrl(updateDTO.getAvatarUrl());</span>
+        }
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if (updateDTO.getStatus() != null) {</span>
+<span class="nc" id="L55">            user.setStatus(updateDTO.getStatus());</span>
+        }
+<span class="nc" id="L57">    }</span>
+
+    public UserDTO.Response entityToResponseDTO(User user) {
+<span class="nc" id="L60">        UserDTO.Response dto = new UserDTO.Response();</span>
+<span class="nc" id="L61">        dto.setId(user.getId());</span>
+<span class="nc" id="L62">        dto.setEmail(user.getEmail());</span>
+<span class="nc" id="L63">        dto.setFirstName(user.getFirstName());</span>
+<span class="nc" id="L64">        dto.setLastName(user.getLastName());</span>
+<span class="nc" id="L65">        dto.setPhone(user.getPhone());</span>
+<span class="nc" id="L66">        dto.setGender(user.getGender());</span>
+<span class="nc" id="L67">        dto.setDateOfBirth(user.getDateOfBirth());</span>
+<span class="nc" id="L68">        dto.setAddress(user.getAddress());</span>
+<span class="nc" id="L69">        dto.setAvatarUrl(user.getAvatarUrl());</span>
+<span class="nc" id="L70">        dto.setCreatedAt(user.getCreatedAt());</span>
+<span class="nc" id="L71">        dto.setStatus(user.getStatus());</span>
+
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        if (user.getRole() != null) {</span>
+<span class="nc" id="L74">            dto.setRole(roleToResponseDTO(user.getRole()));</span>
+        }
+
+<span class="nc" id="L77">        return dto;</span>
+    }
+
+    public RoleDTO.Response roleToResponseDTO(Role role) {
+<span class="nc" id="L81">        RoleDTO.Response roleDTO = new RoleDTO.Response();</span>
+<span class="nc" id="L82">        roleDTO.setId(role.getId());</span>
+<span class="nc" id="L83">        roleDTO.setName(role.getName());</span>
+<span class="nc" id="L84">        roleDTO.setDescription(role.getDescription());</span>
+<span class="nc" id="L85">        return roleDTO;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

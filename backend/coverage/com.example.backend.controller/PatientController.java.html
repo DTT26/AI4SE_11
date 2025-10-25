@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PatientController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.controller</a> &gt; <span class="el_source">PatientController.java</span></div><h1>PatientController.java</h1><pre class="source lang-java linenums">package com.example.backend.controller;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.backend.model.Patient;
+import com.example.backend.service.PatientService;
+
+import lombok.RequiredArgsConstructor;
+
+/**
+ * REST Controller cho Patient entity
+ * Cung cấp các API endpoints để quản lý thông tin bệnh nhân
+ */
+@RestController
+@RequestMapping(&quot;/api/patients&quot;)
+@RequiredArgsConstructor
+@CrossOrigin(origins = &quot;*&quot;)
+public class PatientController {
+
+    private final PatientService patientService;
+    private final com.example.backend.service.EmailOtpService emailOtpService;
+
+
+    /**
+     * Lấy tất cả bệnh nhân với thông tin User và Role
+     * GET /api/patients
+     */
+    @GetMapping
+    public ResponseEntity&lt;List&lt;Patient&gt;&gt; getAllPatientsWithUserAndRole() {
+<span class="nc" id="L44">        List&lt;Patient&gt; patients = patientService.getAllPatientsWithUserAndRole();</span>
+<span class="nc" id="L45">        return ResponseEntity.ok(patients);</span>
+    }
+
+    /**
+     * Lấy bệnh nhân theo ID với thông tin User và Role
+     * GET /api/patients/{patientId}
+     */
+    @GetMapping(&quot;/{patientId}&quot;)
+    public ResponseEntity&lt;Patient&gt; getPatientByIdWithUserAndRole(@PathVariable Long patientId) {
+<span class="nc" id="L54">        Patient patient = patientService.getPatientByIdWithUserAndRole(patientId);</span>
+<span class="nc" id="L55">        return ResponseEntity.ok(patient);</span>
+    }
+
+    /**
+     * Tìm bệnh nhân theo tên với thông tin User và Role
+     * GET /api/patients/search?keyword={keyword}
+     */
+    @GetMapping(&quot;/search&quot;)
+    public ResponseEntity&lt;List&lt;Patient&gt;&gt; getPatientsByNameWithUserAndRole(@RequestParam String keyword) {
+<span class="nc" id="L64">        List&lt;Patient&gt; patients = patientService.getPatientsByNameWithUserAndRole(keyword);</span>
+<span class="nc" id="L65">        return ResponseEntity.ok(patients);</span>
+    }
+
+    /**
+     * Tìm bệnh nhân theo số bảo hiểm y tế với thông tin User và Role
+     * GET /api/patients/insurance/{insuranceNumber}
+     */
+    @GetMapping(&quot;/insurance/{insuranceNumber}&quot;)
+    public ResponseEntity&lt;Patient&gt; getPatientByInsuranceNumberWithUserAndRole(@PathVariable String insuranceNumber) {
+<span class="nc" id="L74">        Optional&lt;Patient&gt; patient = patientService.getPatientByInsuranceNumberWithUserAndRole(insuranceNumber);</span>
+<span class="nc" id="L75">        return patient.map(ResponseEntity::ok)</span>
+<span class="nc" id="L76">                     .orElse(ResponseEntity.notFound().build());</span>
+    }
+
+    /**
+     * Tìm bệnh nhân theo email với thông tin User và Role
+     * GET /api/patients/email/{email}
+     */
+    @GetMapping(&quot;/email/{email}&quot;)
+    public ResponseEntity&lt;Patient&gt; getPatientByEmailWithUserAndRole(@PathVariable String email) {
+<span class="nc" id="L85">        Optional&lt;Patient&gt; patient = patientService.getPatientByEmailWithUserAndRole(email);</span>
+<span class="nc" id="L86">        return patient.map(ResponseEntity::ok)</span>
+<span class="nc" id="L87">                     .orElse(ResponseEntity.notFound().build());</span>
+    }
+
+    /**
+     * Lấy bệnh nhân theo userId
+     * GET /api/patients/user/{userId}
+     */
+    @GetMapping(&quot;/user/{userId}&quot;)
+    public ResponseEntity&lt;Patient&gt; getPatientByUserId(@PathVariable Long userId) {
+<span class="nc" id="L96">        Patient patient = patientService.getPatientByUserId(userId);</span>
+<span class="nc" id="L97">        return ResponseEntity.ok(patient);</span>
+    }
+
+    /**
+     * Tạo bệnh nhân mới
+     * POST /api/patients
+     */
+    @PostMapping
+    public ResponseEntity&lt;Patient&gt; createPatient(@RequestBody CreatePatientRequest request) {
+<span class="nc" id="L106">        Patient patient = patientService.createPatient(</span>
+<span class="nc" id="L107">            request.getUserId(),</span>
+<span class="nc" id="L108">            request.getHealthInsuranceNumber(),</span>
+<span class="nc" id="L109">            request.getMedicalHistory()</span>
+        );
+<span class="nc" id="L111">        return ResponseEntity.status(HttpStatus.CREATED).body(patient);</span>
+    }
+
+    /**
+     * Cập nhật thông tin bệnh nhân
+     * PUT /api/patients/{patientId}
+     */
+    @PutMapping(&quot;/{patientId}&quot;)
+    public ResponseEntity&lt;Patient&gt; updatePatient(@PathVariable Long patientId, @RequestBody UpdatePatientRequest request) {
+<span class="nc" id="L120">        Patient patient = patientService.updatePatient(</span>
+            patientId,
+<span class="nc" id="L122">            request.getHealthInsuranceNumber(),</span>
+<span class="nc" id="L123">            request.getMedicalHistory(),</span>
+<span class="nc" id="L124">            request.getStatus()</span>
+        );
+<span class="nc" id="L126">        return ResponseEntity.ok(patient);</span>
+    }
+
+    /**
+     * Xóa bệnh nhân (soft delete)
+     * DELETE /api/patients/{patientId}
+     */
+    @DeleteMapping(&quot;/{patientId}&quot;)
+    public ResponseEntity&lt;Void&gt; deletePatient(@PathVariable Long patientId) {
+<span class="nc" id="L135">        patientService.deletePatient(patientId);</span>
+<span class="nc" id="L136">        return ResponseEntity.noContent().build();</span>
+    }
+
+
+    /**
+     * Kiểm tra user đã có thông tin bệnh nhân chưa
+     * GET /api/patients/check/{userId}
+     */
+    @GetMapping(&quot;/check/{userId}&quot;)
+    public ResponseEntity&lt;Boolean&gt; isUserPatient(@PathVariable Long userId) {
+<span class="nc" id="L146">        boolean isPatient = patientService.isUserPatient(userId);</span>
+<span class="nc" id="L147">        return ResponseEntity.ok(isPatient);</span>
+    }
+
+    /**
+     * Đăng ký bệnh nhân mới (tạo cả User và Patient)
+     * POST /api/patients/register
+     */
+    @PostMapping(&quot;/register&quot;)
+    public ResponseEntity&lt;Object&gt; registerPatient(@RequestBody PatientService.PatientRegisterRequest request) {
+        // If email already exists in users DB, reject
+<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (patientService.isEmailTaken(request.getEmail())) {</span>
+<span class="nc" id="L158">            return ResponseEntity.status(HttpStatus.CONFLICT).body(&quot;Email đã tồn tại: &quot; + request.getEmail());</span>
+        }
+
+        // Save pending registration and send OTP via EmailOtpService
+        // We delegate to EmailOtpService to store pending registration
+<span class="nc" id="L163">    emailOtpService.savePendingRegistration(request);</span>
+<span class="nc" id="L164">    return ResponseEntity.status(HttpStatus.ACCEPTED).body(java.util.Map.of(&quot;message&quot;, &quot;Yêu cầu đăng ký đã được nhận. Vui lòng kiểm tra email để xác thực OTP.&quot;));</span>
+    }
+
+    @PostMapping(&quot;/confirm-register&quot;)
+    public ResponseEntity&lt;Object&gt; confirmRegister(@RequestBody ConfirmRequest body) {
+<span class="nc" id="L169">        String email = body.getEmail();</span>
+<span class="nc" id="L170">        String otp = body.getOtp();</span>
+<span class="nc" id="L171">    boolean ok = emailOtpService.verifyOtp(email, otp);</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">        if (!ok) {</span>
+<span class="nc" id="L173">            return ResponseEntity.badRequest().body(java.util.Map.of(&quot;message&quot;, &quot;OTP không hợp lệ hoặc đã hết hạn&quot;));</span>
+        }
+
+        // Consume pending registration
+<span class="nc" id="L177">    PatientService.PatientRegisterRequest pending = emailOtpService.consumePendingRegistration(email);</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (pending == null) {</span>
+<span class="nc" id="L179">            return ResponseEntity.badRequest().body(java.util.Map.of(&quot;message&quot;, &quot;Không tìm thấy yêu cầu đăng ký tương ứng&quot;));</span>
+        }
+
+        // Proceed to create user + patient
+<span class="nc" id="L183">        patientService.registerPatient(pending);</span>
+<span class="nc" id="L184">    return ResponseEntity.status(HttpStatus.CREATED).body(java.util.Map.of(&quot;message&quot;, &quot;Đăng ký bệnh nhân thành công&quot;));</span>
+    }
+
+<span class="nc" id="L187">    public static class ConfirmRequest {</span>
+        private String email;
+        private String otp;
+<span class="nc" id="L190">        public String getEmail() { return email; }</span>
+<span class="nc" id="L191">        public void setEmail(String email) { this.email = email; }</span>
+<span class="nc" id="L192">        public String getOtp() { return otp; }</span>
+<span class="nc" id="L193">        public void setOtp(String otp) { this.otp = otp; }</span>
+    }
+
+    /**
+     * Request DTO cho tạo bệnh nhân mới
+     */
+<span class="nc" id="L199">    public static class CreatePatientRequest {</span>
+        private Long userId;
+        private String healthInsuranceNumber;
+        private String medicalHistory;
+
+        // Getters and Setters
+<span class="nc" id="L205">        public Long getUserId() { return userId; }</span>
+<span class="nc" id="L206">        public void setUserId(Long userId) { this.userId = userId; }</span>
+        
+<span class="nc" id="L208">        public String getHealthInsuranceNumber() { return healthInsuranceNumber; }</span>
+<span class="nc" id="L209">        public void setHealthInsuranceNumber(String healthInsuranceNumber) { this.healthInsuranceNumber = healthInsuranceNumber; }</span>
+        
+<span class="nc" id="L211">        public String getMedicalHistory() { return medicalHistory; }</span>
+<span class="nc" id="L212">        public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }</span>
+    }
+
+    /**
+     * Request DTO cho cập nhật bệnh nhân
+     */
+<span class="nc" id="L218">    public static class UpdatePatientRequest {</span>
+        private String healthInsuranceNumber;
+        private String medicalHistory;
+        private String status;
+
+        // Getters and Setters
+<span class="nc" id="L224">        public String getHealthInsuranceNumber() { return healthInsuranceNumber; }</span>
+<span class="nc" id="L225">        public void setHealthInsuranceNumber(String healthInsuranceNumber) { this.healthInsuranceNumber = healthInsuranceNumber; }</span>
+        
+<span class="nc" id="L227">        public String getMedicalHistory() { return medicalHistory; }</span>
+<span class="nc" id="L228">        public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }</span>
+        
+<span class="nc" id="L230">        public String getStatus() { return status; }</span>
+<span class="nc" id="L231">        public void setStatus(String status) { this.status = status; }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

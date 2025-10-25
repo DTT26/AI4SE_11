@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PayOSDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.dto</a> &gt; <span class="el_source">PayOSDTO.java</span></div><h1>PayOSDTO.java</h1><pre class="source lang-java linenums">package com.example.backend.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.List;
+
+<span class="nc" id="L8">public class PayOSDTO {</span>
+    
+    // ========== PayOSPaymentRequestDTO ==========
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PaymentRequest {
+        private String orderCode;
+        private Long amount;
+        private String description;
+        private List&lt;PayOSItemDTO&gt; items;
+        private String cancelUrl;
+        private String returnUrl;
+        private String expiredAt;
+        private String signature;
+        
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class PayOSItemDTO {
+            private String name;
+            private Long quantity;
+            private Long price;
+        }
+    }
+    
+    // ========== PayOSPaymentResponseDTO ==========
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PaymentResponse {
+        private int code;
+        private String message;
+        private PayOSDataDTO data;
+        
+        // Alternative fields that PayOS might return
+        private String paymentLinkId;
+        private String paymentLink;
+        private String qrCode;
+        private String expiredAt;
+        
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class PayOSDataDTO {
+            private String paymentLinkId;
+            private String paymentLink;
+            private String qrCode;
+            private String expiredAt;
+        }
+    }
+    
+    // ========== PayOSWebhookDTO ==========
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Webhook {
+        private String code;
+        private String desc;
+        private PayOSWebhookDataDTO data;
+        private String signature;
+        
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class PayOSWebhookDataDTO {
+            private String orderCode;
+            private Long amount;
+            private String description;
+            private String accountNumber;
+            private String reference;
+            private String transactionDateTime;
+            private String currency;
+            private String paymentLinkId;
+            private String code;
+            private String desc;
+            private Long counter;
+            private String virtualAccountName;
+            private String virtualAccountNumber;
+            private String location;
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

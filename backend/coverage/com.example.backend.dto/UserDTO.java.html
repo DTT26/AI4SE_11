@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.dto</a> &gt; <span class="el_source">UserDTO.java</span></div><h1>UserDTO.java</h1><pre class="source lang-java linenums">package com.example.backend.dto;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+import com.example.backend.model.User;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+<span class="nc" id="L15">public class UserDTO {</span>
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Create {
+        @NotBlank(message = &quot;Email không được để trống&quot;)
+        @Email(message = &quot;Email không hợp lệ&quot;)
+        @Size(max = 100, message = &quot;Email không được quá 100 ký tự&quot;)
+        private String email;
+
+        @NotBlank(message = &quot;Mật khẩu không được để trống&quot;)
+        @Size(min = 6, max = 255, message = &quot;Mật khẩu phải có ít nhất 6 ký tự&quot;)
+        private String password;
+
+        @NotBlank(message = &quot;Tên không được để trống&quot;)
+        @Size(max = 50, message = &quot;Tên không được quá 50 ký tự&quot;)
+        private String firstName;
+
+        @NotBlank(message = &quot;Họ không được để trống&quot;)
+        @Size(max = 50, message = &quot;Họ không được quá 50 ký tự&quot;)
+        private String lastName;
+
+        @Size(max = 20, message = &quot;Số điện thoại không được quá 20 ký tự&quot;)
+        private String phone;
+
+        private User.Gender gender;
+
+        private LocalDate dateOfBirth;
+
+        @Size(max = 255, message = &quot;Địa chỉ không được quá 255 ký tự&quot;)
+        private String address;
+
+        @Size(max = 500, message = &quot;URL ảnh đại diện không được quá 500 ký tự&quot;)
+        private String avatarUrl;
+
+        private Long roleId;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Update {
+        @Email(message = &quot;Email không hợp lệ&quot;)
+        @Size(max = 100, message = &quot;Email không được quá 100 ký tự&quot;)
+        private String email;
+
+        @Size(min = 6, max = 255, message = &quot;Mật khẩu phải có ít nhất 6 ký tự&quot;)
+        private String password;
+
+        @Size(max = 50, message = &quot;Tên không được quá 50 ký tự&quot;)
+        private String firstName;
+
+        @Size(max = 50, message = &quot;Họ không được quá 50 ký tự&quot;)
+        private String lastName;
+
+        @Size(max = 20, message = &quot;Số điện thoại không được quá 20 ký tự&quot;)
+        private String phone;
+
+        private User.Gender gender;
+
+        private LocalDate dateOfBirth;
+
+        @Size(max = 255, message = &quot;Địa chỉ không được quá 255 ký tự&quot;)
+        private String address;
+
+        @Size(max = 500, message = &quot;URL ảnh đại diện không được quá 500 ký tự&quot;)
+        private String avatarUrl;
+
+        private User.UserStatus status;
+
+        private Long roleId;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Response {
+        private Long id;
+        private String email;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private User.Gender gender;
+        private LocalDate dateOfBirth;
+        private String address;
+        private String avatarUrl;
+        private LocalDateTime createdAt;
+        private User.UserStatus status;
+        private RoleDTO.Response role;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

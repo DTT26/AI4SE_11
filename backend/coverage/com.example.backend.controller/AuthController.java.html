@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.example.backend.controller;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.backend.dto.AuthDTO;
+import com.example.backend.model.User;
+import com.example.backend.repository.UserRepository;
+import com.example.backend.service.AuthService;
+import com.example.backend.service.EmailOtpService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping(&quot;/api/auth&quot;) 
+@RequiredArgsConstructor
+// Allow requests from the React dev server and allow credentials so cookies can be set
+@CrossOrigin(origins = &quot;http://localhost:3000&quot;, allowCredentials = &quot;true&quot;)
+public class AuthController {
+
+    private final AuthService authService;
+    private final EmailOtpService emailOtpService;
+    private final UserRepository userRepository;
+
+    @PostMapping(&quot;/login&quot;)
+    public ResponseEntity&lt;AuthDTO.LoginResponse&gt; login(@Valid @RequestBody AuthDTO.LoginRequest loginRequest) {
+<span class="nc" id="L39">        AuthDTO.LoginResponse response = authService.login(loginRequest);</span>
+        
+<span class="nc bnc" id="L41" title="All 2 branches missed.">        if (response.isSuccess()) {</span>
+<span class="nc bnc" id="L42" title="All 4 branches missed.">            if (response.getUser() != null &amp;&amp; response.getUser().getId() != null) {</span>
+                // Chỉ lưu userId vào cookie
+<span class="nc" id="L44">                Long userId = response.getUser().getId();</span>
+<span class="nc" id="L45">                ResponseCookie cookie = ResponseCookie.from(&quot;userId&quot;, String.valueOf(userId))</span>
+<span class="nc" id="L46">                        .path(&quot;/&quot;)</span>
+<span class="nc" id="L47">                        .maxAge(7 * 24 * 60 * 60) // 7 days</span>
+<span class="nc" id="L48">                        .sameSite(&quot;Lax&quot;)</span>
+<span class="nc" id="L49">                        .httpOnly(false)</span>
+<span class="nc" id="L50">                        .secure(false)</span>
+<span class="nc" id="L51">                        .build();</span>
+
+<span class="nc" id="L53">                return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);</span>
+            }
+<span class="nc" id="L55">            return ResponseEntity.ok(response);</span>
+        } else {
+<span class="nc" id="L57">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+
+    @PostMapping(&quot;/logout&quot;)
+    public ResponseEntity&lt;AuthDTO.LogoutResponse&gt; logout(@RequestBody(required = false) AuthDTO.LogoutRequest logoutRequest) {
+<span class="nc" id="L63">        AuthDTO.LogoutResponse response = authService.logout(logoutRequest);</span>
+        // Clear userId cookie on logout
+<span class="nc" id="L65">        ResponseCookie cookieUserId = ResponseCookie.from(&quot;userId&quot;, &quot;&quot;)</span>
+<span class="nc" id="L66">                .path(&quot;/&quot;)</span>
+<span class="nc" id="L67">                .maxAge(0)</span>
+<span class="nc" id="L68">                .sameSite(&quot;Lax&quot;)</span>
+<span class="nc" id="L69">                .httpOnly(false)</span>
+<span class="nc" id="L70">                .secure(false)</span>
+<span class="nc" id="L71">                .build();</span>
+
+<span class="nc" id="L73">        return ResponseEntity.ok()</span>
+<span class="nc" id="L74">                .header(HttpHeaders.SET_COOKIE, cookieUserId.toString())</span>
+<span class="nc" id="L75">                .body(response);</span>
+    }
+
+    @PostMapping(&quot;/register&quot;)
+    public ResponseEntity&lt;AuthDTO.RegisterResponse&gt; register(@Valid @RequestBody AuthDTO.RegisterRequest registerRequest) {
+<span class="nc" id="L80">        AuthDTO.RegisterResponse response = authService.register(registerRequest);</span>
+        
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (response.isSuccess()) {</span>
+<span class="nc" id="L83">            return ResponseEntity.ok(response);</span>
+        } else {
+<span class="nc" id="L85">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+
+    @PostMapping(&quot;/google&quot;)
+    public ResponseEntity&lt;AuthDTO.LoginResponse&gt; googleSignIn(@RequestBody Map&lt;String, String&gt; body) {
+        try {
+            // For now, accept both idToken and direct email/name (temporary solution)
+<span class="nc" id="L93">            String email = body.get(&quot;email&quot;);</span>
+<span class="nc" id="L94">            String firstName = body.getOrDefault(&quot;firstName&quot;, &quot;Google&quot;);</span>
+<span class="nc" id="L95">            String lastName = body.getOrDefault(&quot;lastName&quot;, &quot;User&quot;);</span>
+<span class="nc" id="L96">            String idToken = body.get(&quot;idToken&quot;);</span>
+<span class="nc" id="L97">            String picture = body.get(&quot;picture&quot;); // Lấy ảnh Google</span>
+            
+            // If email not provided but idToken exists, we need to decode it
+<span class="nc bnc" id="L100" title="All 6 branches missed.">            if ((email == null || email.trim().isEmpty()) &amp;&amp; idToken != null) {</span>
+                // For now, create a dummy user since we don't have proper JWT decoding
+                // TODO: Implement proper Google ID token verification
+<span class="nc" id="L103">                email = &quot;test-google-user@example.com&quot;;</span>
+<span class="nc" id="L104">                firstName = &quot;Google&quot;;</span>
+<span class="nc" id="L105">                lastName = &quot;User&quot;;</span>
+            }
+
+<span class="nc" id="L108">            AuthDTO.LoginResponse response = authService.oauthLogin(email, firstName, lastName, picture);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            if (response.isSuccess()) {</span>
+<span class="nc bnc" id="L110" title="All 4 branches missed.">                if (response.getUser() != null &amp;&amp; response.getUser().getId() != null) {</span>
+                    // Chỉ lưu userId vào cookie
+<span class="nc" id="L112">                    Long userId = response.getUser().getId();</span>
+<span class="nc" id="L113">                    ResponseCookie cookie = ResponseCookie.from(&quot;userId&quot;, String.valueOf(userId))</span>
+<span class="nc" id="L114">                            .path(&quot;/&quot;)</span>
+<span class="nc" id="L115">                            .maxAge(7 * 24 * 60 * 60) // 7 days</span>
+<span class="nc" id="L116">                            .sameSite(&quot;Lax&quot;)</span>
+<span class="nc" id="L117">                            .httpOnly(false)</span>
+<span class="nc" id="L118">                            .secure(false)</span>
+<span class="nc" id="L119">                            .build();</span>
+
+<span class="nc" id="L121">                    return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);</span>
+                }
+<span class="nc" id="L123">                return ResponseEntity.ok(response);</span>
+            }
+<span class="nc" id="L125">            return ResponseEntity.badRequest().body(response);</span>
+<span class="nc" id="L126">        } catch (Exception e) {</span>
+<span class="nc" id="L127">            return ResponseEntity.badRequest().body(new AuthDTO.LoginResponse(&quot;OAuth error&quot;, false, null, null));</span>
+        }
+    }
+
+    // Email OTP Endpoints (no database storage)
+    @PostMapping(&quot;/send-otp&quot;)
+    public ResponseEntity&lt;AuthDTO.OtpResponse&gt; sendOtp(@Valid @RequestBody AuthDTO.SendOtpRequest request) {
+        try {
+            // Kiểm tra email có tồn tại trong database không
+<span class="nc" id="L136">            Optional&lt;User&gt; user = userRepository.findByEmail(request.getEmail());</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            if (!user.isPresent()) {</span>
+<span class="nc" id="L138">                AuthDTO.OtpResponse response = new AuthDTO.OtpResponse(</span>
+                    &quot;Email không tồn tại trong hệ thống. Vui lòng kiểm tra lại email của bạn.&quot;,
+                    false
+                );
+<span class="nc" id="L142">                return ResponseEntity.badRequest().body(response);</span>
+            }
+            
+            // Kiểm tra tài khoản có đang hoạt động không
+<span class="nc bnc" id="L146" title="All 2 branches missed.">            if (user.get().getStatus() != User.UserStatus.ACTIVE) {</span>
+<span class="nc" id="L147">                AuthDTO.OtpResponse response = new AuthDTO.OtpResponse(</span>
+                    &quot;Tài khoản đã bị khóa hoặc không hoạt động. Vui lòng liên hệ quản trị viên.&quot;,
+                    false
+                );
+<span class="nc" id="L151">                return ResponseEntity.badRequest().body(response);</span>
+            }
+            
+            // Gửi OTP nếu email tồn tại và tài khoản hoạt động
+<span class="nc" id="L155">            boolean success = emailOtpService.sendOtp(request.getEmail());</span>
+            
+<span class="nc" id="L157">            AuthDTO.OtpResponse response = new AuthDTO.OtpResponse(</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                success ? &quot;Mã OTP đã được gửi đến email của bạn&quot; : &quot;Không thể gửi OTP, vui lòng thử lại&quot;,</span>
+                success
+            );
+            
+<span class="nc bnc" id="L162" title="All 2 branches missed.">            return success ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);</span>
+<span class="nc" id="L163">        } catch (Exception e) {</span>
+<span class="nc" id="L164">            AuthDTO.OtpResponse response = new AuthDTO.OtpResponse(</span>
+<span class="nc" id="L165">                &quot;Lỗi hệ thống khi gửi OTP: &quot; + e.getMessage(),</span>
+                false
+            );
+<span class="nc" id="L168">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+
+    @PostMapping(&quot;/verify-otp&quot;) 
+    public ResponseEntity&lt;AuthDTO.OtpResponse&gt; verifyOtp(@Valid @RequestBody AuthDTO.VerifyOtpRequest request) {
+<span class="nc" id="L174">        boolean success = emailOtpService.verifyOtp(request.getEmail(), request.getOtp());</span>
+        
+<span class="nc" id="L176">        AuthDTO.OtpResponse response = new AuthDTO.OtpResponse(</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">            success ? &quot;Mã OTP xác thực thành công&quot; : &quot;Mã OTP không hợp lệ hoặc đã hết hạn&quot;,</span>
+            success
+        );
+        
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        return success ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);</span>
+    }
+
+    @GetMapping(&quot;/test-mail&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; testMailConfiguration() {
+<span class="nc" id="L186">        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+        
+        try {
+            // Test gửi OTP đến email test
+<span class="nc" id="L190">            boolean canSend = emailOtpService.sendOtp(&quot;test@example.com&quot;);</span>
+<span class="nc" id="L191">            result.put(&quot;mailConfigured&quot;, true);</span>
+<span class="nc" id="L192">            result.put(&quot;canSendOtp&quot;, canSend);</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">            result.put(&quot;message&quot;, canSend ? &quot;Mail server hoạt động tốt&quot; : &quot;Không thể gửi email&quot;);</span>
+<span class="nc" id="L194">        } catch (Exception e) {</span>
+<span class="nc" id="L195">            result.put(&quot;mailConfigured&quot;, false);</span>
+<span class="nc" id="L196">            result.put(&quot;canSendOtp&quot;, false);</span>
+<span class="nc" id="L197">            result.put(&quot;message&quot;, &quot;Lỗi cấu hình mail: &quot; + e.getMessage());</span>
+<span class="nc" id="L198">            result.put(&quot;error&quot;, e.getClass().getSimpleName());</span>
+<span class="nc" id="L199">        }</span>
+        
+<span class="nc" id="L201">        return ResponseEntity.ok(result);</span>
+    }
+
+    @PostMapping(&quot;/reset-password&quot;)
+    public ResponseEntity&lt;AuthDTO.ResetPasswordResponse&gt; resetPassword(@Valid @RequestBody AuthDTO.ResetPasswordRequest request) {
+<span class="nc" id="L206">        AuthDTO.ResetPasswordResponse response = authService.resetPassword(</span>
+<span class="nc" id="L207">            request.getEmail(),</span>
+<span class="nc" id="L208">            request.getOtp(),</span>
+<span class="nc" id="L209">            request.getNewPassword()</span>
+        );
+        
+<span class="nc bnc" id="L212" title="All 2 branches missed.">        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);</span>
+    }
+    
+    @PostMapping(&quot;/fix-google-users&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; fixGoogleUsers() {
+<span class="nc" id="L217">        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+        
+        try {
+<span class="nc" id="L220">            authService.fixAllGoogleUsers();</span>
+<span class="nc" id="L221">            result.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L222">            result.put(&quot;message&quot;, &quot;Đã sửa tất cả user Google&quot;);</span>
+<span class="nc" id="L223">        } catch (Exception e) {</span>
+<span class="nc" id="L224">            result.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L225">            result.put(&quot;message&quot;, &quot;Lỗi khi sửa user Google: &quot; + e.getMessage());</span>
+<span class="nc" id="L226">        }</span>
+        
+<span class="nc" id="L228">        return ResponseEntity.ok(result);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

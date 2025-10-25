@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DepartmentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">DepartmentService.java</span></div><h1>DepartmentService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
+import com.example.backend.dto.DepartmentDTO;
+import com.example.backend.exception.ConflictException;
+import com.example.backend.exception.NotFoundException;
+import com.example.backend.mapper.DepartmentMapper;
+import com.example.backend.model.Department;
+import com.example.backend.repository.DepartmentRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class DepartmentService {
+
+    private final DepartmentRepository departmentRepository;
+    private final DepartmentMapper departmentMapper;
+
+    @Transactional(readOnly = true)
+    public Page&lt;DepartmentDTO.Response&gt; getAllDepartments(Pageable pageable) {
+<span class="nc" id="L34">        return departmentRepository.findAll(pageable)</span>
+<span class="nc" id="L35">                .map(departmentMapper::entityToResponseDTO);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public DepartmentDTO.Response getDepartmentById(Long id) {
+<span class="nc" id="L40">        Department department = findDepartmentById(id);</span>
+<span class="nc" id="L41">        return departmentMapper.entityToResponseDTO(department);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public DepartmentDTO.Response getDepartmentByName(String departmentName) {
+<span class="nc" id="L46">        Department department = departmentRepository.findByDepartmentName(departmentName)</span>
+<span class="nc" id="L47">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy khoa với tên: &quot; + departmentName));</span>
+<span class="nc" id="L48">        return departmentMapper.entityToResponseDTO(department);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;DepartmentDTO.Response&gt; searchDepartments(String departmentName, 
+                                                        Department.DepartmentStatus status, 
+                                                        Pageable pageable) {
+<span class="nc" id="L55">        return departmentRepository.findDepartmentsWithFilters(departmentName, status, pageable)</span>
+<span class="nc" id="L56">                .map(departmentMapper::entityToResponseDTO);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;DepartmentDTO.Response&gt; getActiveDepartments(Pageable pageable) {
+<span class="nc" id="L61">        return departmentRepository.findByStatus(Department.DepartmentStatus.ACTIVE, pageable)</span>
+<span class="nc" id="L62">                .map(departmentMapper::entityToResponseDTO);</span>
+    }
+
+    public DepartmentDTO.Response createDepartment(DepartmentDTO.Create createDTO) {
+<span class="nc" id="L66">        validateDepartmentNameNotExists(createDTO.getDepartmentName());</span>
+        
+<span class="nc" id="L68">        Department department = departmentMapper.createDTOToEntity(createDTO);</span>
+<span class="nc" id="L69">        Department savedDepartment = departmentRepository.save(department);</span>
+        
+<span class="nc" id="L71">        return departmentMapper.entityToResponseDTO(savedDepartment);</span>
+    }
+
+    public DepartmentDTO.Response updateDepartment(Long id, DepartmentDTO.Update updateDTO) {
+<span class="nc" id="L75">        Department department = findDepartmentById(id);</span>
+<span class="nc" id="L76">        updateDepartmentFields(department, updateDTO);</span>
+<span class="nc" id="L77">        Department updatedDepartment = departmentRepository.save(department);</span>
+<span class="nc" id="L78">        return departmentMapper.entityToResponseDTO(updatedDepartment);</span>
+    }
+
+    public void deleteDepartment(Long id) {
+<span class="nc" id="L82">        Department department = findDepartmentById(id);</span>
+        // Soft delete - chuyển sang trạng thái CLOSED
+<span class="nc" id="L84">        department.setStatus(Department.DepartmentStatus.CLOSED);</span>
+<span class="nc" id="L85">        departmentRepository.save(department);</span>
+<span class="nc" id="L86">    }</span>
+
+    public DepartmentDTO.Response changeStatus(Long id, Department.DepartmentStatus newStatus) {
+<span class="nc" id="L89">        Department department = findDepartmentById(id);</span>
+<span class="nc" id="L90">        department.setStatus(newStatus);</span>
+<span class="nc" id="L91">        Department updatedDepartment = departmentRepository.save(department);</span>
+<span class="nc" id="L92">        return departmentMapper.entityToResponseDTO(updatedDepartment);</span>
+    }
+
+    public void hardDeleteDepartment(Long id) {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (!departmentRepository.existsById(id)) {</span>
+<span class="nc" id="L97">            throw new NotFoundException(&quot;Không tìm thấy khoa với ID: &quot; + id);</span>
+        }
+<span class="nc" id="L99">        departmentRepository.deleteById(id);</span>
+<span class="nc" id="L100">    }</span>
+
+    @Transactional(readOnly = true)
+    public DepartmentDTO.Statistics getDepartmentStatistics() {
+<span class="nc" id="L104">        long total = departmentRepository.count();</span>
+<span class="nc" id="L105">        long active = departmentRepository.countByStatus(Department.DepartmentStatus.ACTIVE);</span>
+<span class="nc" id="L106">        long inactive = departmentRepository.countByStatus(Department.DepartmentStatus.INACTIVE);</span>
+<span class="nc" id="L107">        long maintenance = departmentRepository.countByStatus(Department.DepartmentStatus.MAINTENANCE);</span>
+<span class="nc" id="L108">        long closed = departmentRepository.countByStatus(Department.DepartmentStatus.CLOSED);</span>
+<span class="nc" id="L109">        long withDoctors = departmentRepository.countDepartmentsWithDoctors();</span>
+<span class="nc" id="L110">        long withoutDoctors = total - withDoctors;</span>
+
+<span class="nc" id="L112">        return new DepartmentDTO.Statistics(</span>
+            total, active, inactive, maintenance, closed, withDoctors, withoutDoctors
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public long getActiveDepartmentCount() {
+<span class="nc" id="L119">        return departmentRepository.countByStatus(Department.DepartmentStatus.ACTIVE);</span>
+    }
+
+    // Helper Methods
+    private void validateDepartmentNameNotExists(String departmentName) {
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (departmentRepository.existsByDepartmentName(departmentName)) {</span>
+<span class="nc" id="L125">            throw new ConflictException(&quot;Tên khoa đã tồn tại: &quot; + departmentName);</span>
+        }
+<span class="nc" id="L127">    }</span>
+
+    private Department findDepartmentById(Long id) {
+<span class="nc" id="L130">        return departmentRepository.findById(id)</span>
+<span class="nc" id="L131">                .orElseThrow(() -&gt; new NotFoundException(&quot;Không tìm thấy khoa với ID: &quot; + id));</span>
+    }
+
+    private void updateDepartmentFields(Department department, DepartmentDTO.Update updateDTO) {
+<span class="nc" id="L135">        updateDepartmentNameIfChanged(department, updateDTO.getDepartmentName());</span>
+        
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (updateDTO.getDescription() != null) {</span>
+<span class="nc" id="L138">            department.setDescription(updateDTO.getDescription());</span>
+        }
+        
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (updateDTO.getImageUrl() != null) {</span>
+<span class="nc" id="L142">            System.out.println(&quot;Updating department &quot; + department.getId() + &quot; imageUrl from '&quot; + department.getImageUrl() + &quot;' to '&quot; + updateDTO.getImageUrl() + &quot;'&quot;);</span>
+<span class="nc" id="L143">            department.setImageUrl(updateDTO.getImageUrl());</span>
+        }
+        
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        if (updateDTO.getStatus() != null) {</span>
+<span class="nc" id="L147">            department.setStatus(updateDTO.getStatus());</span>
+        }
+<span class="nc" id="L149">    }</span>
+
+    private void updateDepartmentNameIfChanged(Department department, String newDepartmentName) {
+<span class="nc bnc" id="L152" title="All 4 branches missed.">        if (newDepartmentName != null &amp;&amp; !newDepartmentName.equals(department.getDepartmentName())) {</span>
+<span class="nc" id="L153">            validateDepartmentNameNotExists(newDepartmentName);</span>
+<span class="nc" id="L154">            department.setDepartmentName(newDepartmentName);</span>
+        }
+<span class="nc" id="L156">    }</span>
+
+    /**
+     * Upload ảnh cho department
+     * @param departmentId ID của department
+     * @param file file ảnh
+     * @return URL của ảnh đã upload
+     */
+    public String uploadDepartmentImage(Long departmentId, MultipartFile file) {
+        try {
+            // Kiểm tra department có tồn tại không
+<span class="nc" id="L167">            Department department = findDepartmentById(departmentId);</span>
+            
+            // Validate file
+<span class="nc bnc" id="L170" title="All 2 branches missed.">            if (file.isEmpty()) {</span>
+<span class="nc" id="L171">                throw new RuntimeException(&quot;File không được để trống&quot;);</span>
+            }
+            
+            // Check file size (5MB limit)
+<span class="nc bnc" id="L175" title="All 2 branches missed.">            if (file.getSize() &gt; 5 * 1024 * 1024) {</span>
+<span class="nc" id="L176">                throw new RuntimeException(&quot;Kích thước file không được vượt quá 5MB&quot;);</span>
+            }
+            
+            // Check file type
+<span class="nc" id="L180">            String contentType = file.getContentType();</span>
+<span class="nc bnc" id="L181" title="All 4 branches missed.">            if (contentType == null || !contentType.startsWith(&quot;image/&quot;)) {</span>
+<span class="nc" id="L182">                throw new RuntimeException(&quot;File phải là ảnh&quot;);</span>
+            }
+            
+            // Generate unique filename
+<span class="nc" id="L186">            String originalFilename = file.getOriginalFilename();</span>
+<span class="nc bnc" id="L187" title="All 4 branches missed.">            if (originalFilename == null || originalFilename.isEmpty()) {</span>
+<span class="nc" id="L188">                throw new RuntimeException(&quot;Tên file không hợp lệ&quot;);</span>
+            }
+<span class="nc" id="L190">            String extension = originalFilename.substring(originalFilename.lastIndexOf(&quot;.&quot;));</span>
+<span class="nc" id="L191">            String filename = &quot;department_&quot; + departmentId + extension;</span>
+            
+            // Save file to uploads/departments directory
+<span class="nc" id="L194">            String uploadDir = &quot;uploads/departments/&quot;;</span>
+<span class="nc" id="L195">            Path uploadPath = Paths.get(uploadDir);</span>
+<span class="nc bnc" id="L196" title="All 2 branches missed.">            if (!Files.exists(uploadPath)) {</span>
+<span class="nc" id="L197">                Files.createDirectories(uploadPath);</span>
+            }
+            
+            // Delete old images for this department
+<span class="nc" id="L201">            deleteOldDepartmentImages(departmentId, uploadPath);</span>
+            
+<span class="nc" id="L203">            Path filePath = uploadPath.resolve(filename);</span>
+<span class="nc" id="L204">            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);</span>
+            
+            // Update department with new image URL
+<span class="nc" id="L207">            String imageUrl = &quot;/uploads/departments/&quot; + filename;</span>
+<span class="nc" id="L208">            department.setImageUrl(imageUrl);</span>
+<span class="nc" id="L209">            departmentRepository.save(department);</span>
+            
+<span class="nc" id="L211">            return imageUrl;</span>
+            
+<span class="nc" id="L213">        } catch (IOException e) {</span>
+<span class="nc" id="L214">            System.err.println(&quot;IOException in uploadDepartmentImage: &quot; + e.getMessage());</span>
+<span class="nc" id="L215">            e.printStackTrace();</span>
+<span class="nc" id="L216">            throw new RuntimeException(&quot;Lỗi khi lưu file: &quot; + e.getMessage());</span>
+<span class="nc" id="L217">        } catch (Exception e) {</span>
+<span class="nc" id="L218">            System.err.println(&quot;Exception in uploadDepartmentImage: &quot; + e.getMessage());</span>
+<span class="nc" id="L219">            e.printStackTrace();</span>
+<span class="nc" id="L220">            throw new RuntimeException(&quot;Lỗi khi upload ảnh: &quot; + e.getMessage());</span>
+        }
+    }
+    
+    /**
+     * Xóa tất cả ảnh cũ của department
+     */
+    private void deleteOldDepartmentImages(Long departmentId, Path uploadPath) {
+        try {
+            // Tìm tất cả file bắt đầu bằng &quot;department_{id}&quot;
+<span class="nc" id="L230">            String prefix = &quot;department_&quot; + departmentId;</span>
+            
+<span class="nc" id="L232">            Files.list(uploadPath)</span>
+<span class="nc" id="L233">                .filter(path -&gt; path.getFileName().toString().startsWith(prefix))</span>
+<span class="nc" id="L234">                .forEach(path -&gt; {</span>
+                    try {
+<span class="nc" id="L236">                        Files.deleteIfExists(path);</span>
+<span class="nc" id="L237">                        System.out.println(&quot;Deleted old image: &quot; + path.getFileName());</span>
+<span class="nc" id="L238">                    } catch (IOException e) {</span>
+<span class="nc" id="L239">                        System.err.println(&quot;Error deleting old image &quot; + path.getFileName() + &quot;: &quot; + e.getMessage());</span>
+<span class="nc" id="L240">                    }</span>
+<span class="nc" id="L241">                });</span>
+                
+<span class="nc" id="L243">        } catch (IOException e) {</span>
+<span class="nc" id="L244">            System.err.println(&quot;Error listing files for department &quot; + departmentId + &quot;: &quot; + e.getMessage());</span>
+<span class="nc" id="L245">        }</span>
+<span class="nc" id="L246">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

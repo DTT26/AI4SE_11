@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DepartmentMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.mapper</a> &gt; <span class="el_source">DepartmentMapper.java</span></div><h1>DepartmentMapper.java</h1><pre class="source lang-java linenums">package com.example.backend.mapper;
+
+import org.springframework.stereotype.Component;
+
+import com.example.backend.dto.DepartmentDTO;
+import com.example.backend.model.Department;
+
+@Component
+<span class="nc" id="L9">public class DepartmentMapper {</span>
+
+    public Department createDTOToEntity(DepartmentDTO.Create createDTO) {
+<span class="nc" id="L12">        Department department = new Department();</span>
+<span class="nc" id="L13">        department.setDepartmentName(createDTO.getDepartmentName());</span>
+<span class="nc" id="L14">        department.setDescription(createDTO.getDescription());</span>
+<span class="nc" id="L15">        department.setImageUrl(createDTO.getImageUrl());</span>
+<span class="nc" id="L16">        department.setStatus(Department.DepartmentStatus.ACTIVE);</span>
+<span class="nc" id="L17">        return department;</span>
+    }
+
+    public DepartmentDTO.Response entityToResponseDTO(Department department) {
+<span class="nc" id="L21">        DepartmentDTO.Response dto = new DepartmentDTO.Response();</span>
+<span class="nc" id="L22">        dto.setId(department.getId());</span>
+<span class="nc" id="L23">        dto.setDepartmentName(department.getDepartmentName());</span>
+<span class="nc" id="L24">        dto.setDescription(department.getDescription());</span>
+<span class="nc" id="L25">        dto.setImageUrl(department.getImageUrl());</span>
+<span class="nc" id="L26">        dto.setStatus(department.getStatus());</span>
+<span class="nc" id="L27">        return dto;</span>
+    }
+
+    public void updateEntityFromDTO(Department department, DepartmentDTO.Update updateDTO) {
+<span class="nc bnc" id="L31" title="All 2 branches missed.">        if (updateDTO.getDepartmentName() != null) {</span>
+<span class="nc" id="L32">            department.setDepartmentName(updateDTO.getDepartmentName());</span>
+        }
+<span class="nc bnc" id="L34" title="All 2 branches missed.">        if (updateDTO.getDescription() != null) {</span>
+<span class="nc" id="L35">            department.setDescription(updateDTO.getDescription());</span>
+        }
+<span class="nc bnc" id="L37" title="All 2 branches missed.">        if (updateDTO.getImageUrl() != null) {</span>
+<span class="nc" id="L38">            department.setImageUrl(updateDTO.getImageUrl());</span>
+        }
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (updateDTO.getStatus() != null) {</span>
+<span class="nc" id="L41">            department.setStatus(updateDTO.getStatus());</span>
+        }
+<span class="nc" id="L43">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

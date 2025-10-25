@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PayOSConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.config</a> &gt; <span class="el_source">PayOSConfig.java</span></div><h1>PayOSConfig.java</h1><pre class="source lang-java linenums">package com.example.backend.config;
+
+import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import vn.payos.PayOS;
+import vn.payos.core.ClientOptions;
+
+@Configuration
+@Data
+public class PayOSConfig {
+
+    @Value(&quot;${payos.client-id}&quot;)
+    private String clientId;
+
+    @Value(&quot;${payos.api-key}&quot;)
+    private String apiKey;
+
+    @Value(&quot;${payos.checksum-key}&quot;)
+    private String checksumKey;
+
+    @Value(&quot;${payos.base-url}&quot;)
+    private String baseUrl;
+
+    @Value(&quot;${payos.return-url}&quot;)
+    private String returnUrl;
+
+    @Value(&quot;${payos.cancel-url}&quot;)
+    private String cancelUrl;
+
+    @Value(&quot;${payos.webhook-url}&quot;)
+    private String webhookUrl;
+
+    @Value(&quot;${payos.log-level:INFO}&quot;)
+    private String logLevel;
+
+    @Bean
+    public PayOS payOS() {
+<span class="nc" id="L40">        ClientOptions options = ClientOptions.builder()</span>
+<span class="nc" id="L41">                .clientId(clientId)</span>
+<span class="nc" id="L42">                .apiKey(apiKey)</span>
+<span class="nc" id="L43">                .checksumKey(checksumKey)</span>
+<span class="nc" id="L44">                .logLevel(ClientOptions.LogLevel.valueOf(logLevel.toUpperCase()))</span>
+<span class="nc" id="L45">                .build();</span>
+<span class="nc" id="L46">        return new PayOS(options);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

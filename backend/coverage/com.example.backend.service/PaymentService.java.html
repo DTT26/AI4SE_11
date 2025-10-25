@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="vi"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">backend</a> &gt; <a href="index.source.html" class="el_package">com.example.backend.service</a> &gt; <span class="el_source">PaymentService.java</span></div><h1>PaymentService.java</h1><pre class="source lang-java linenums">package com.example.backend.service;
+
+import com.example.backend.dto.PaymentDTO;
+import com.example.backend.mapper.PaymentMapper;
+import com.example.backend.model.Appointment;
+import com.example.backend.model.Payment;
+import com.example.backend.repository.AppointmentRepository;
+import com.example.backend.repository.PaymentRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L21">@Slf4j</span>
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final PayOSService payOSService;
+    private final PaymentMapper paymentMapper;
+    
+    @Transactional
+    public PaymentDTO.Response createPayment(PaymentDTO.Create paymentCreateDTO) {
+        try {
+<span class="nc" id="L32">            log.info(&quot;🔍 Creating payment for appointment ID: {}&quot;, paymentCreateDTO.getAppointmentId());</span>
+<span class="nc" id="L33">            log.info(&quot;🔍 Payment DTO: {}&quot;, paymentCreateDTO);</span>
+            
+            // Kiểm tra appointment có tồn tại không
+<span class="nc" id="L36">            Optional&lt;Appointment&gt; appointmentOpt = appointmentRepository.findById(paymentCreateDTO.getAppointmentId());</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">            if (appointmentOpt.isEmpty()) {</span>
+<span class="nc" id="L38">                log.error(&quot;❌ Appointment not found with ID: {}&quot;, paymentCreateDTO.getAppointmentId());</span>
+<span class="nc" id="L39">                throw new RuntimeException(&quot;Không tìm thấy lịch hẹn với ID: &quot; + paymentCreateDTO.getAppointmentId());</span>
+            }
+            
+<span class="nc" id="L42">            Appointment appointment = appointmentOpt.get();</span>
+<span class="nc" id="L43">            log.info(&quot;✅ Found appointment: ID={}, Fee={}&quot;, appointment.getAppointmentId(), appointment.getFee());</span>
+            
+            // Kiểm tra xem đã có payment cho appointment này chưa
+<span class="nc" id="L46">            List&lt;Payment&gt; existingPayments = paymentRepository.findByAppointment_AppointmentId(paymentCreateDTO.getAppointmentId());</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            Optional&lt;Payment&gt; existingPayment = existingPayments.isEmpty() ? Optional.empty() : Optional.of(existingPayments.get(0));</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">            if (existingPayment.isPresent()) {</span>
+<span class="nc" id="L49">                Payment payment = existingPayment.get();</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">                if (payment.getStatus() == Payment.PaymentStatus.PENDING) {</span>
+                    // Nếu payment đang pending, tạo lại link thanh toán
+<span class="nc" id="L52">                    payOSService.createPaymentLink(</span>
+                        payment, 
+<span class="nc" id="L54">                        paymentCreateDTO.getReturnUrl(), </span>
+<span class="nc" id="L55">                        paymentCreateDTO.getCancelUrl()</span>
+                    );
+                    
+<span class="nc" id="L58">                    paymentRepository.save(payment);</span>
+<span class="nc" id="L59">                    return paymentMapper.toResponseDTO(payment);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">                } else if (payment.getStatus() == Payment.PaymentStatus.PAID) {</span>
+<span class="nc" id="L61">                    throw new RuntimeException(&quot;Lịch hẹn này đã được thanh toán&quot;);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">                } else if (payment.getStatus() == Payment.PaymentStatus.CANCELLED || </span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">                          payment.getStatus() == Payment.PaymentStatus.FAILED) {</span>
+                    // Nếu payment đã bị hủy hoặc thất bại, cập nhật lại thành PENDING và tạo link mới
+<span class="nc" id="L65">                    log.info(&quot;🔄 Reusing cancelled/failed payment for appointment ID: {}&quot;, paymentCreateDTO.getAppointmentId());</span>
+                    
+                    // Reset payment fields
+<span class="nc" id="L68">                    payment.setStatus(Payment.PaymentStatus.PENDING);</span>
+<span class="nc" id="L69">                    payment.setPayOSLink(null);</span>
+<span class="nc" id="L70">                    payment.setPayOSPaymentId(null);</span>
+<span class="nc" id="L71">                    payment.setPayOSCode(null);</span>
+<span class="nc" id="L72">                    payment.setPaidAt(null);</span>
+<span class="nc" id="L73">                    payment.setFailureReason(null);</span>
+                    
+                    // Cập nhật amount từ appointment
+<span class="nc bnc" id="L76" title="All 2 branches missed.">                    if (appointment.getFee() != null) {</span>
+<span class="nc" id="L77">                        payment.setAmount(appointment.getFee());</span>
+<span class="nc" id="L78">                        log.info(&quot;Updated payment amount from appointment fee: {} VND&quot;, appointment.getFee());</span>
+                    }
+                    
+                    // Cập nhật description
+<span class="nc bnc" id="L82" title="All 2 branches missed.">                    payment.setDescription(paymentCreateDTO.getDescription() != null ? </span>
+<span class="nc" id="L83">                        paymentCreateDTO.getDescription() : &quot;Thanh toán lịch hẹn khám bệnh&quot;);</span>
+                    
+                    // Tạo PayOS payment link mới
+<span class="nc" id="L86">                    payOSService.createPaymentLink(</span>
+                        payment,
+<span class="nc" id="L88">                        paymentCreateDTO.getReturnUrl(),</span>
+<span class="nc" id="L89">                        paymentCreateDTO.getCancelUrl()</span>
+                    );
+                    
+<span class="nc" id="L92">                    payment = paymentRepository.save(payment);</span>
+<span class="nc" id="L93">                    log.info(&quot;✅ Reused payment with new PayOS link for payment ID: {}&quot;, payment.getPaymentId());</span>
+<span class="nc" id="L94">                    return paymentMapper.toResponseDTO(payment);</span>
+                }
+            }
+            
+            // Tạo payment mới
+<span class="nc" id="L99">            Payment payment = new Payment();</span>
+<span class="nc" id="L100">            payment.setAppointment(appointment);</span>
+            
+            // Lấy fee từ appointment thay vì từ DTO
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            if (appointment.getFee() != null) {</span>
+<span class="nc" id="L104">                payment.setAmount(appointment.getFee());</span>
+<span class="nc" id="L105">                log.info(&quot;Using appointment fee: {} VND&quot;, appointment.getFee());</span>
+            } else {
+                // Fallback nếu appointment không có fee
+<span class="nc" id="L108">                payment.setAmount(paymentCreateDTO.getAmount());</span>
+<span class="nc" id="L109">                log.warn(&quot;Appointment has no fee, using DTO amount: {}&quot;, paymentCreateDTO.getAmount());</span>
+            }
+            
+<span class="nc bnc" id="L112" title="All 2 branches missed.">            payment.setDescription(paymentCreateDTO.getDescription() != null ? </span>
+<span class="nc" id="L113">                paymentCreateDTO.getDescription() : &quot;Thanh toán lịch hẹn khám bệnh&quot;);</span>
+<span class="nc" id="L114">            payment.setStatus(Payment.PaymentStatus.PENDING);</span>
+            
+            // Lưu payment trước
+<span class="nc" id="L117">            payment = paymentRepository.save(payment);</span>
+            
+            // Tạo PayOS payment link
+<span class="nc" id="L120">            log.info(&quot;🔍 Creating PayOS payment link for payment ID: {}&quot;, payment.getPaymentId());</span>
+<span class="nc" id="L121">            payOSService.createPaymentLink(</span>
+                payment,
+<span class="nc" id="L123">                paymentCreateDTO.getReturnUrl(),</span>
+<span class="nc" id="L124">                paymentCreateDTO.getCancelUrl()</span>
+            );
+            
+            // Cập nhật payment với thông tin từ PayOS (đã được xử lý trong PayOSService)
+            // PayOSService đã handle việc set PayOS fields, chỉ cần log
+<span class="nc" id="L129">            log.info(&quot;Payment created with PayOS integration for payment ID: {}&quot;, payment.getPaymentId());</span>
+            
+<span class="nc" id="L131">            payment = paymentRepository.save(payment);</span>
+            
+<span class="nc" id="L133">            log.info(&quot;Payment created successfully with ID: {}&quot;, payment.getPaymentId());</span>
+<span class="nc" id="L134">            return paymentMapper.toResponseDTO(payment);</span>
+            
+<span class="nc" id="L136">        } catch (Exception e) {</span>
+<span class="nc" id="L137">            log.error(&quot;Error creating payment: &quot;, e);</span>
+<span class="nc" id="L138">            throw new RuntimeException(&quot;Lỗi khi tạo thanh toán: &quot; + e.getMessage());</span>
+        }
+    }
+    
+    public PaymentDTO.Response getPaymentById(Long paymentId) {
+<span class="nc" id="L143">        Optional&lt;Payment&gt; paymentOpt = paymentRepository.findById(paymentId);</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (paymentOpt.isEmpty()) {</span>
+<span class="nc" id="L145">            throw new RuntimeException(&quot;Không tìm thấy thanh toán với ID: &quot; + paymentId);</span>
+        }
+<span class="nc" id="L147">        return paymentMapper.toResponseDTO(paymentOpt.get());</span>
+    }
+    
+    public PaymentDTO.Response getPaymentByPayOSPaymentId(String payOSPaymentId) {
+<span class="nc" id="L151">        Optional&lt;Payment&gt; paymentOpt = paymentRepository.findByPayOSPaymentId(payOSPaymentId);</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        if (paymentOpt.isEmpty()) {</span>
+<span class="nc" id="L153">            throw new RuntimeException(&quot;Không tìm thấy thanh toán với PayOS Payment ID: &quot; + payOSPaymentId);</span>
+        }
+<span class="nc" id="L155">        return paymentMapper.toResponseDTO(paymentOpt.get());</span>
+    }
+    
+    public List&lt;PaymentDTO.Response&gt; getPaymentsByAppointmentId(Long appointmentId) {
+<span class="nc" id="L159">        List&lt;Payment&gt; payments = paymentRepository.findByAppointment_AppointmentId(appointmentId);</span>
+<span class="nc" id="L160">        return payments.stream()</span>
+<span class="nc" id="L161">                .map(paymentMapper::toResponseDTO)</span>
+<span class="nc" id="L162">                .toList();</span>
+    }
+    
+    public List&lt;PaymentDTO.Response&gt; getPaymentsByPatientId(Long patientId) {
+<span class="nc" id="L166">        List&lt;Payment&gt; payments = paymentRepository.findByPatientId(patientId);</span>
+<span class="nc" id="L167">        return payments.stream()</span>
+<span class="nc" id="L168">                .map(paymentMapper::toResponseDTO)</span>
+<span class="nc" id="L169">                .toList();</span>
+    }
+    
+    public List&lt;PaymentDTO.Response&gt; getPaymentsByDoctorId(Long doctorId) {
+<span class="nc" id="L173">        List&lt;Payment&gt; payments = paymentRepository.findByDoctorId(doctorId);</span>
+<span class="nc" id="L174">        return payments.stream()</span>
+<span class="nc" id="L175">                .map(paymentMapper::toResponseDTO)</span>
+<span class="nc" id="L176">                .toList();</span>
+    }
+    
+    public Page&lt;PaymentDTO.Response&gt; getAllPayments(Pageable pageable) {
+<span class="nc" id="L180">        Page&lt;Payment&gt; payments = paymentRepository.findAll(pageable);</span>
+<span class="nc" id="L181">        return payments.map(paymentMapper::toResponseDTO);</span>
+    }
+    
+    public List&lt;PaymentDTO.Response&gt; getPaymentsByStatus(Payment.PaymentStatus status) {
+<span class="nc" id="L185">        List&lt;Payment&gt; payments = paymentRepository.findByStatus(status);</span>
+<span class="nc" id="L186">        return payments.stream()</span>
+<span class="nc" id="L187">                .map(paymentMapper::toResponseDTO)</span>
+<span class="nc" id="L188">                .toList();</span>
+    }
+    
+    @Transactional
+    public PaymentDTO.Response updatePaymentStatus(Long paymentId, Payment.PaymentStatus status) {
+<span class="nc" id="L193">        Optional&lt;Payment&gt; paymentOpt = paymentRepository.findById(paymentId);</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        if (paymentOpt.isEmpty()) {</span>
+<span class="nc" id="L195">            throw new RuntimeException(&quot;Không tìm thấy thanh toán với ID: &quot; + paymentId);</span>
+        }
+        
+<span class="nc" id="L198">        Payment payment = paymentOpt.get();</span>
+<span class="nc" id="L199">        payment.setStatus(status);</span>
+        
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        if (status == Payment.PaymentStatus.PAID) {</span>
+<span class="nc" id="L202">            payment.setPaidAt(java.time.LocalDateTime.now());</span>
+        }
+        
+<span class="nc" id="L205">        payment = paymentRepository.save(payment);</span>
+<span class="nc" id="L206">        log.info(&quot;Payment status updated to {} for payment ID: {}&quot;, status, paymentId);</span>
+        
+<span class="nc" id="L208">        return paymentMapper.toResponseDTO(payment);</span>
+    }
+    
+    @Transactional
+    public PaymentDTO.Response updatePaymentStatusByPayOSPaymentId(String payOSPaymentId, Payment.PaymentStatus status) {
+<span class="nc" id="L213">        Optional&lt;Payment&gt; paymentOpt = paymentRepository.findByPayOSPaymentId(payOSPaymentId);</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        if (paymentOpt.isEmpty()) {</span>
+<span class="nc" id="L215">            throw new RuntimeException(&quot;Không tìm thấy thanh toán với PayOS Payment ID: &quot; + payOSPaymentId);</span>
+        }
+        
+<span class="nc" id="L218">        Payment payment = paymentOpt.get();</span>
+<span class="nc" id="L219">        payment.setStatus(status);</span>
+        
+<span class="nc bnc" id="L221" title="All 2 branches missed.">        if (status == Payment.PaymentStatus.PAID) {</span>
+<span class="nc" id="L222">            payment.setPaidAt(java.time.LocalDateTime.now());</span>
+        }
+        
+<span class="nc" id="L225">        payment = paymentRepository.save(payment);</span>
+<span class="nc" id="L226">        log.info(&quot;Payment status updated to {} for PayOS Payment ID: {}&quot;, status, payOSPaymentId);</span>
+        
+<span class="nc" id="L228">        return paymentMapper.toResponseDTO(payment);</span>
+    }
+
+    @Transactional
+    public PaymentDTO.Response updatePaymentStatusFromPayOS(String payOSPaymentId, String status, String orderCode) {
+<span class="nc" id="L233">        log.info(&quot;🔍 Updating payment status from PayOS: payOSId={}, status={}, orderCode={}&quot;, </span>
+            payOSPaymentId, status, orderCode);
+        
+        // Tìm payment theo PayOS Payment ID
+<span class="nc" id="L237">        Optional&lt;Payment&gt; paymentOpt = paymentRepository.findByPayOSPaymentId(payOSPaymentId);</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">        if (paymentOpt.isEmpty()) {</span>
+<span class="nc" id="L239">            throw new RuntimeException(&quot;Không tìm thấy thanh toán với PayOS Payment ID: &quot; + payOSPaymentId);</span>
+        }
+        
+<span class="nc" id="L242">        Payment payment = paymentOpt.get();</span>
+        
+        // Cập nhật status
+        Payment.PaymentStatus paymentStatus;
+<span class="nc bnc" id="L246" title="All 4 branches missed.">        switch (status.toUpperCase()) {</span>
+            case &quot;PAID&quot;:
+<span class="nc" id="L248">                paymentStatus = Payment.PaymentStatus.PAID;</span>
+<span class="nc" id="L249">                break;</span>
+            case &quot;CANCELLED&quot;:
+<span class="nc" id="L251">                paymentStatus = Payment.PaymentStatus.CANCELLED;</span>
+<span class="nc" id="L252">                break;</span>
+            case &quot;PENDING&quot;:
+<span class="nc" id="L254">                paymentStatus = Payment.PaymentStatus.PENDING;</span>
+<span class="nc" id="L255">                break;</span>
+            default:
+<span class="nc" id="L257">                paymentStatus = Payment.PaymentStatus.FAILED;</span>
+                break;
+        }
+        
+<span class="nc" id="L261">        payment.setStatus(paymentStatus);</span>
+        
+<span class="nc bnc" id="L263" title="All 2 branches missed.">        if (paymentStatus == Payment.PaymentStatus.PAID) {</span>
+<span class="nc" id="L264">            payment.setPaidAt(java.time.LocalDateTime.now());</span>
+        }
+        
+        // Cập nhật orderCode nếu có
+<span class="nc bnc" id="L268" title="All 4 branches missed.">        if (orderCode != null &amp;&amp; !orderCode.isEmpty()) {</span>
+<span class="nc" id="L269">            payment.setPayOSCode(orderCode);</span>
+        }
+        
+<span class="nc" id="L272">        payment = paymentRepository.save(payment);</span>
+<span class="nc" id="L273">        log.info(&quot;✅ Payment status updated to {} for PayOS Payment ID: {}&quot;, paymentStatus, payOSPaymentId);</span>
+        
+<span class="nc" id="L275">        return paymentMapper.toResponseDTO(payment);</span>
+    }
+    
+    @Transactional
+    public void deletePayment(Long paymentId) {
+<span class="nc" id="L280">        Optional&lt;Payment&gt; paymentOpt = paymentRepository.findById(paymentId);</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">        if (paymentOpt.isEmpty()) {</span>
+<span class="nc" id="L282">            throw new RuntimeException(&quot;Không tìm thấy thanh toán với ID: &quot; + paymentId);</span>
+        }
+        
+<span class="nc" id="L285">        Payment payment = paymentOpt.get();</span>
+<span class="nc bnc" id="L286" title="All 2 branches missed.">        if (payment.getStatus() == Payment.PaymentStatus.PAID) {</span>
+<span class="nc" id="L287">            throw new RuntimeException(&quot;Không thể xóa thanh toán đã hoàn thành&quot;);</span>
+        }
+        
+<span class="nc" id="L290">        paymentRepository.delete(payment);</span>
+<span class="nc" id="L291">        log.info(&quot;Payment deleted with ID: {}&quot;, paymentId);</span>
+<span class="nc" id="L292">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
